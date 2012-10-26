@@ -1,0 +1,14 @@
+;; Object pp_task1
+;; EDE Project Files are auto generated: Do Not Edit
+(ede-proj-project "pp_task1"
+  :file "Project.ede"
+  :name "pp_task1"
+  :targets (list 
+   (ede-proj-target-makefile-program "task1"
+    :name "task1"
+    :path ""
+    :source '("task1.cpp" "Threads.cpp")
+    :auxsource '("Threads.h")
+    )
+   )
+  )
