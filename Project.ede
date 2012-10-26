@@ -4,10 +4,10 @@
   :file "Project.ede"
   :name "pp_task1"
   :targets (list 
-   (ede-proj-target-makefile-program "task1"
-    :name "task1"
+   (ede-proj-target-makefile-program "task1a"
+    :name "task1a"
     :path ""
-    :source '("task1.cpp" "Threads.cpp")
+    :source '("task1a.cpp" "Threads.cpp")
     :auxsource '("Threads.h")
     )
    (ede-proj-target-makefile-program "task1b"

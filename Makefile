@@ -10,8 +10,8 @@ CFLAGS=-pthread
 top="$(CURDIR)"/
 ede_FILES=Project.ede Makefile
 
-task1_SOURCES=task1.cpp Threads.cpp
-task1_OBJ= task1.o Threads.o
+task1a_SOURCES=task1a.cpp Threads.cpp
+task1a_OBJ= task1a.o Threads.o
 CXX= g++
 CXX_COMPILE=$(CXX) $(DEFS) $(INCLUDES) $(CPPFLAGS) $(CFLAGS)
 CXX_DEPENDENCIES=-Wp,-MD,.deps/$(*F).P
@@ -22,9 +22,9 @@ VERSION=1.0
 DISTDIR=$(top)pp_task1-$(VERSION)
 top_builddir = 
 
-DEP_FILES=.deps/task1.P .deps/Threads.P .deps/Threads.P .deps/task1b.P .deps/Threads.P .deps/Threads.P
+DEP_FILES=.deps/task1a.P .deps/Threads.P .deps/Threads.P .deps/task1b.P .deps/Threads.P .deps/Threads.P
 
-all: task1 task1b
+all: task1a task1b
 
 DEPS_MAGIC := $(shell mkdir .deps > /dev/null 2>&1 || :)
 -include $(DEP_FILES)
@@ -33,7 +33,7 @@ DEPS_MAGIC := $(shell mkdir .deps > /dev/null 2>&1 || :)
 	@echo '$(CXX_COMPILE) -c $<'; \
 	$(CXX_COMPILE) $(CXX_DEPENDENCIES) -o $@ -c $<
 
-task1: $(task1_OBJ)
+task1a: $(task1a_OBJ)
 	$(CXX_LINK) -o $@ $^ $(LDDEPS)
 
 task1b: $(task1b_OBJ)
@@ -50,7 +50,7 @@ clean:
 dist:
 	rm -rf $(DISTDIR)
 	mkdir $(DISTDIR)
-	cp $(task1_SOURCES) $(task1b_SOURCES) $(ede_FILES) $(DISTDIR)
+	cp $(task1a_SOURCES) $(task1b_SOURCES) $(ede_FILES) $(DISTDIR)
 	tar -cvzf $(DISTDIR).tar.gz $(DISTDIR)
 	rm -rf $(DISTDIR)
 
