@@ -10,7 +10,7 @@
 #include "pthread.h"
 #include "semaphore.h"
 
-#define THREADS_CERR_LOG
+//#define THREADS_CERR_LOG
 
 /** Constants */
 

@@ -44,6 +44,7 @@ enum EBankResult {
     RES_ERR_LOCKED,
     RES_ERR_UNLOKED,
     RES_NOW_LOCK_YOUR,
+    RES_PENDING_LOCK,
     RES_ERR_NOT_OWNER,
     RES_UNDEFINED
 };
@@ -53,6 +54,7 @@ std::string EBankResultToStr[] = {
     "RES_ERR_LOCKED",
     "RES_ERR_UNLOKED",
     "RES_NOW_LOCK_YOUR",
+    "RES_PENDING_LOCK",
     "RES_ERR_NOT_OWNER",
     "RES_UNDEFINED"
 };
@@ -131,6 +133,7 @@ public:
         PROTECT;
         return m_resQs[i];
     }
+    unsigned GetAccount() { return account; }
 protected:
     std::vector<TOpQ*> m_opQs;
     std::vector<TResQ*> m_resQs;
@@ -191,6 +194,7 @@ protected:
                 SendRes(client, RES_NOW_LOCK_YOUR);
             } else if (op.m_data && m_lockOwner != client) { //wait
                 waitQueue.push(client);
+                SendRes(client, RES_PENDING_LOCK);
             } else {
                 SendRes(client, RES_ERR_LOCKED);
             }
@@ -231,7 +235,8 @@ public:
     CBankUser(std::string name, std::string filename, TOpQ* opQ, TResQ* resQ):
         CBasicThread(name),
         m_filename(filename),
-        m_continuationSem(name + " continuation semaphore"),
+        m_actionAllowed(name + " act allowed sem"),
+        m_actionCompleted(name + " act completed sem"),
         m_opQ(opQ),
         m_resQ(resQ),
         m_skipMessages(0)
@@ -244,25 +249,30 @@ public:
             out << *it << "\n";
         }
     }
+    void WaitStep() {
+        m_actionCompleted.Get();
+    }
     void AllowNextStep() {
         NAMED_INFO("allowed next step");
-        m_continuationSem.Put();
+        m_actionAllowed.Put();
     }
 protected:
     std::string m_filename;
-    CSemaphore m_continuationSem;
+    CSemaphore m_actionAllowed;
+    CSemaphore m_actionCompleted;
     TOpQ* m_opQ;
     TResQ* m_resQ;
     std::vector<CBankOp> m_programm;
     unsigned m_skipMessages;
-    void WaitNextStep() {
-        NAMED_INFO("wait next step");
-        m_continuationSem.Get();
+    void NextStep() {
+        NAMED_INFO("next step");
+        m_actionCompleted.Put();
+        m_actionAllowed.Get();
     }
     virtual void Body() {
         ReadProgram();
         DumpProgrammToLog();
-        WaitNextStep();
+        NextStep();
         ExecuteProgramm();
     }
     bool ReadProgram() {
@@ -290,26 +300,40 @@ protected:
         for (std::vector<CBankOp>::iterator it = m_programm.begin(); it != m_programm.end(); ++it) {
             NAMED_INFO("sendind " + it->ToStr());
             m_opQ->Push(*it);
-            CBankRes res = m_resQ->Pop();
-            NAMED_INFO("got " + res.ToStr());
+            CBankRes res;
+            do {
+                res = m_resQ->Pop();
+                NAMED_INFO("got " + res.ToStr());
+            } while (res.m_res == RES_PENDING_LOCK);
         }
         
     }
 };
 
-int main()
+int main(int argc, char* argv[])
 {
-    CBankSupervisor s("Supervisor", 1);
-    CBankUser u("1st User", "input1.txt", s.GetOpQPtr(0), s.GetResQPtr(0));
-    u.Go();
-    u.AllowNextStep();
-    u.AllowNextStep();
+    CBankSupervisor s("Supervisor", argc - 1);
+    CBankUser* u[100];
+    for (int i = 0; i < argc - 1; ++i) {
+        std::stringstream ss;
+        ss << "User#" << i;
+        u[i] = new CBankUser(ss.str(), argv[i + 1], s.GetOpQPtr(i), s.GetResQPtr(i));
+    }
     s.Go();
-
+    for (int i = 0; i < argc - 1; ++i) u[i]->Go();
+    for (int i = 0; i < argc - 1; ++i) u[i]->WaitStep();
+    for (int i = 0; i < argc - 1; ++i) u[i]->AllowNextStep();
     s.Join();
-    u.Join();
+    for (int i = 0; i < argc - 1 ; ++i) u[i]->Join();
     s.PublishLog(std::cerr);
-    u.PublishLog(std::cerr);
-    std::cerr << "Good";
+    for (int i = 0; i < argc - 1; ++i) {
+        std::stringstream ss;
+        ss << argv[i] << "." << i << ".log";
+        std::ofstream fout;
+        fout.open(ss.str().c_str());
+        u[i]->PublishLog(fout);
+        fout.close();
+    }        
+    std::cerr << "Good\n" << s.GetAccount();
     return 0;
 }
