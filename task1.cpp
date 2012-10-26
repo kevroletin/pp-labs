@@ -40,6 +40,8 @@ public:
         if (m_spawnThreads) {
             CThread2 t2;
             CThread3 t3;
+            t2.Go();
+            t3.Go();
             t2.Join();
             t3.Join();
         }
@@ -50,16 +52,20 @@ protected:
 
 int main(int argc, char* argv[])
 {
-    switch (1) {
+    switch (argc > 1) {
     case 0: {
         CThread1 t1(0);
         CThread2 t2;
         CThread3 t3;
+        t1.Go();
+        t2.Go();
+        t3.Go();
         t2.Join();
         t3.Join();
     } break;
     case 1: {
         CThread1 t1(1);
+        t1.Go();
         t1.Join();
         break;
     }

@@ -10,5 +10,13 @@
     :source '("task1.cpp" "Threads.cpp")
     :auxsource '("Threads.h")
     )
+   (ede-proj-target-makefile-program "task1b"
+    :name "task1b"
+    :path ""
+    :source '("task1b.cpp" "Threads.cpp")
+    :auxsource '("Threads.h")
+    )
    )
+  :variables '(("CFLAGS" . "-pthread"))
+  :configuration-variables 'nil
   )

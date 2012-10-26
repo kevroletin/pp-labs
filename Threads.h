@@ -6,16 +6,13 @@
 #include <vector>
 #include <cassert>
 #include <sstream>
+#include <deque>
 #include "pthread.h"
 #include "semaphore.h"
 
 //#define THREADS_CERR_LOG
 
 /** Primitives */
-
-class CEvent {
-
-};
 
 class CMutex {
 public:
@@ -24,7 +21,7 @@ public:
     {
         InitMutex(); 
     }
-//    ~CMutex() { pthread_mutex_destroy(&m_mutex); }
+    ~CMutex() { pthread_mutex_destroy(&m_mutex); }
     int Get() {
         return pthread_mutex_lock(&m_mutex);
     }
@@ -55,16 +52,14 @@ protected:
 
 #define PROTECT CScopeMutex protect(m_mutex)
 
-//class CSemaphore: protected MixSlaveLogger {
 class CSemaphore {
 public:
     CSemaphore(std::string name, int init_value = 0): 
-//        MixSlaveLogger(masterLog),
         m_name(name)
     {
         InitMutex(init_value); 
     }
-//    ~CSemaphore() { sem_destroy(&m_sem); } 
+    ~CSemaphore() { sem_destroy(&m_sem); } 
     int Get() {
         return sem_wait(&m_sem);
     }
@@ -88,6 +83,68 @@ protected:
     int InitMutex(int init_value) {
         return sem_init(&m_sem, 1, init_value);
     }
+};
+
+/*
+enum EMessageType {
+    MSG_CONTROL,
+    MSG_APPLICATION
+};
+
+enum EControlCmd {
+    CMD_RUN,
+    CMD_SUSPEND,
+    CMD_DIE
+};
+
+struct CMessage {
+    virtual EMessageType GetType() = 0;
+};
+
+struct CControlMessage: CMessage {
+    virtual EMessageType GetType() { return MSG_CONTROL; }
+    EControlCmd command;
+};
+
+struct CApplicationMessage: CMessage {
+    virtual EMessageType GetType() { return MSG_APPLICATION; }
+};
+*/
+
+struct CMessage {
+CMessage(std::string str): m_type(0), m_tag(0), m_str(str) {}
+    unsigned m_type;
+    unsigned m_tag;
+    std::string m_str;
+    void* m_data;
+};
+
+class CSafeQueue {
+public:
+    CSafeQueue(std::string name):
+        m_name(name),
+        m_mutex(name + " queue protect mutex"),
+        m_pop_sem(name + " queue pop semahore", 0) {}
+    void Push(CMessage msg) {
+	PROTECT;
+	dataContainer.push_back(msg);
+	m_pop_sem.Put();
+    }
+    CMessage Pop() {
+	m_pop_sem.Get();
+	{
+	    PROTECT;
+	    CMessage res = dataContainer.front();
+	    dataContainer.pop_front();
+	    return res;
+	}
+    }
+    
+protected:
+    std::deque<CMessage> dataContainer;
+    std::string m_name;
+    CMutex m_mutex;
+    CSemaphore m_pop_sem;
 };
 
 /** Logs */
@@ -178,39 +235,6 @@ struct MixDummyLogger: ILogger {
     virtual ELogLevel GetLogLevel() { return E_LOG_NONE; }
 };
 
-enum EMessageType {
-    MSG_CONTROL,
-    MSG_APPLICATION
-};
-
-enum EControlCmd {
-    CMD_RUN,
-    CMD_SUSPEND,
-    CMD_DIE
-};
-
-struct CMessage {
-    virtual EMessageType GetType() = 0;
-};
-
-struct CControlMessage: CMessage {
-    virtual EMessageType GetType() { return MSG_CONTROL; }
-    EControlCmd command;
-};
-
-struct CApplicationMessage: CMessage {
-    virtual EMessageType GetType() { return MSG_APPLICATION; }
-};
-
-class CSafeQueue {
-public:
-    CSafeQueue(std::string name): m_name(name), m_mutex(name + " protect mutex") {}
-    
-protected:
-    std::string m_name;
-    CMutex m_mutex;
-};
-
 #ifdef THREADS_CERR_LOG
 class CBasicThread: public MixCerrLogger {
 #else
@@ -225,12 +249,10 @@ public:
 #endif	
         m_name(name)
     {
-        pthread_create(&m_pthread, NULL, CBasicThread::StartThread, static_cast<void*>(this));
     }
-    void* Start() {
-        LOG_INFO(m_name + " start");
-        Body();
-        return NULL;
+    void Go()
+    {
+	pthread_create(&m_pthread, NULL, CBasicThread::StartThread, static_cast<void*>(this));
     }
     void* Join() {
         LOG_INFO(m_name + " join");
@@ -238,11 +260,17 @@ public:
         pthread_join(m_pthread, &buff);
         return buff;
     }
+protected:
+    void* Start() {
+        LOG_INFO(m_name + " start");
+        Body();
+        return NULL;
+    }
     static void* StartThread(void* param) {
         return static_cast<CBasicThread*>(param)->Start();
     }
     virtual void Body() = 0;
-protected:
+
     std::string m_name;
     pthread_t m_pthread;
 };
