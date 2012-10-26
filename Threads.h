@@ -12,6 +12,10 @@
 
 //#define THREADS_CERR_LOG
 
+/** Constants */
+
+const int OK = 0;
+
 /** Primitives */
 
 class CMutex {
@@ -60,8 +64,9 @@ public:
         InitMutex(init_value); 
     }
     ~CSemaphore() { sem_destroy(&m_sem); } 
-    int Get() {
-        return sem_wait(&m_sem);
+    int Get(bool block = true) {
+        return block ? sem_wait(&m_sem) :
+                       sem_trywait(&m_sem);
     }
     int Put() {
         return sem_post(&m_sem);
@@ -98,14 +103,23 @@ public:
 	m_pop_sem.Put();
     }
     TData Pop() {
-	m_pop_sem.Get();
-	{
-	    PROTECT;
-	    TData res = dataContainer.front();
-	    dataContainer.pop_front();
-	    return res;
-	}
-    }    
+        m_pop_sem.Get();
+        {
+            PROTECT;
+            TData res = dataContainer.front();
+            dataContainer.pop_front();
+            return res;
+        }
+    }
+    bool TryPop(TData& res) {
+        if (OK != m_pop_sem.Get(false)) {
+            return false;
+        }
+        PROTECT;
+        res = dataContainer.front();
+        dataContainer.pop_front();
+        return true;
+    }
 protected:
     std::deque<TData> dataContainer;
     std::string m_name;
