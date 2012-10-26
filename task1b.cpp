@@ -103,8 +103,8 @@ typedef CQueue<CBankRes> TResQ;
 
 class CBankSupervisor: public CBasicThread {
 public:
-    CBankSupervisor(std::string name, unsigned size):
-        CBasicThread(name),
+    CBankSupervisor(std::string name, unsigned size, ELogLevel logLevel = E_LOG_DEBUG):
+        CBasicThread(name, logLevel),
         m_size(size),
         m_locked(false),
         m_lockOwner(-1),
@@ -232,8 +232,8 @@ protected:
 
 class CBankUser: public CBasicThread {
 public:
-    CBankUser(std::string name, std::string filename, TOpQ* opQ, TResQ* resQ):
-        CBasicThread(name),
+    CBankUser(std::string name, std::string filename, TOpQ* opQ, TResQ* resQ, ELogLevel logLevel = E_LOG_DEBUG):
+        CBasicThread(name, logLevel),
         m_filename(filename),
         m_actionAllowed(name + " act allowed sem"),
         m_actionCompleted(name + " act completed sem"),
@@ -312,12 +312,12 @@ protected:
 
 int main(int argc, char* argv[])
 {
-    CBankSupervisor s("Supervisor", argc - 1);
+    CBankSupervisor s("Supervisor", argc - 1, E_LOG_INFO);
     CBankUser* u[100];
     for (int i = 0; i < argc - 1; ++i) {
         std::stringstream ss;
         ss << "User#" << i;
-        u[i] = new CBankUser(ss.str(), argv[i + 1], s.GetOpQPtr(i), s.GetResQPtr(i));
+        u[i] = new CBankUser(ss.str(), argv[i + 1], s.GetOpQPtr(i), s.GetResQPtr(i), E_LOG_INFO);
     }
     s.Go();
     for (int i = 0; i < argc - 1; ++i) u[i]->Go();
