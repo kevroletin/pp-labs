@@ -6,7 +6,9 @@
 #include <cassert>
 #include "Threads.h"
 
-MixMasterLoger g_mutexLog(E_LOG_DEBUG);
+//MixMasterLoger g_mutexLog(E_LOG_DEBUG);
+//MixCerrLogger g_mutexLog(E_LOG_DEBUG);
+MixDummyLogger g_mutexLog;
 MixMasterLoger g_semaphoreLog(E_LOG_DEBUG);
 MixMasterLoger g_EventLog;
 MixMasterLoger g_QueueLog;
