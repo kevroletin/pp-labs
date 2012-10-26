@@ -10,7 +10,7 @@
 #include "pthread.h"
 #include "semaphore.h"
 
-//#define THREADS_CERR_LOG
+#define THREADS_CERR_LOG
 
 /** Constants */
 
@@ -183,6 +183,11 @@ struct MixLogger: ILogger {
 #define LOG_DEBUG(msg)   PutToLogCond(CLogItem(std::string("[debug] ") + msg), E_LOG_DEBUG)
 #define LOG(msg)         PutToLogCond(CLogItem(msg), E_LOG_ERRORS)
 
+#define NAMED_ERROR(msg)   LOG_ERROR("(" + m_name + ") " + msg);
+#define NAMED_WARNING(msg) LOG_WARNING("(" + m_name + ") " + msg);
+#define NAMED_INFO(msg)    LOG_INFO("(" + m_name + ") " + msg);
+#define NAMED_DEBUG(msg)   LOG_DEBUG("(" + m_name + ") " + msg);
+
 typedef std::vector<CLogItem> TLogContainer;
 
 TLogContainer& operator<<(TLogContainer& logContainer, CLogItem& logItem);
@@ -245,14 +250,14 @@ public:
 	pthread_create(&m_pthread, NULL, CBasicThread::StartThread, static_cast<void*>(this));
     }
     void* Join() {
-        LOG_INFO(m_name + " join");
+        NAMED_INFO("join");
         void* buff;
         pthread_join(m_pthread, &buff);
         return buff;
     }
 protected:
     void* Start() {
-        LOG_INFO(m_name + " start");
+        NAMED_INFO("start");
         Body();
         return NULL;
     }
