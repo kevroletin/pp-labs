@@ -1,5 +1,5 @@
 #include <iostream>
-#include "Threads.h"
+#include "../Threads.h"
 #include <cassert>
 #include <sstream>
 
@@ -11,7 +11,7 @@ public:
             bool ok = true;
             while (ok) {
                 std::stringstream ss;
-                CMessage msg = m_in->Pop();
+                CSampleMessage msg = m_in->Pop();
                 ss << m_name << " got " << msg.m_str << "\n";
                 std::cerr << ss.str();
                 if (m_out != NULL) {
@@ -24,7 +24,7 @@ public:
                 std::stringstream ss, ss2;
                 ss << m_name << " create " << i << "\n";
                 ss2 << i;
-                CMessage msg(ss2.str());
+                CSampleMessage msg(ss2.str());
                 msg.m_type = i;
                 std::cerr << ss.str();
                 m_out->Push(msg);

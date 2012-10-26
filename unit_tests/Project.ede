@@ -1,0 +1,16 @@
+;; Object pp_tests
+;; EDE Project Files are auto generated: Do Not Edit
+(ede-proj-project "pp_tests"
+  :file "Project.ede"
+  :name "pp_tests"
+  :targets (list 
+   (ede-proj-target-makefile-program "queue"
+    :name "queue"
+    :path ""
+    :source '("queue.cpp" "../Threads.cpp")
+    :auxsource '("../Threads.h")
+    )
+   )
+  :variables '(("CFLAGS" . "-pthread"))
+  :configuration-variables 'nil
+  )

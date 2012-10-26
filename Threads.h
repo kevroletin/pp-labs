@@ -85,67 +85,43 @@ protected:
     }
 };
 
-/*
-enum EMessageType {
-    MSG_CONTROL,
-    MSG_APPLICATION
+template<class TData>
+class CQueue {
+public:
+    CQueue(std::string name):
+        m_name(name),
+        m_mutex(name + " queue protect mutex"),
+        m_pop_sem(name + " queue pop semahore", 0) {}
+    void Push(TData msg) {
+	PROTECT;
+	dataContainer.push_back(msg);
+	m_pop_sem.Put();
+    }
+    TData Pop() {
+	m_pop_sem.Get();
+	{
+	    PROTECT;
+	    TData res = dataContainer.front();
+	    dataContainer.pop_front();
+	    return res;
+	}
+    }    
+protected:
+    std::deque<TData> dataContainer;
+    std::string m_name;
+    CMutex m_mutex;
+    CSemaphore m_pop_sem;
 };
 
-enum EControlCmd {
-    CMD_RUN,
-    CMD_SUSPEND,
-    CMD_DIE
-};
-
-struct CMessage {
-    virtual EMessageType GetType() = 0;
-};
-
-struct CControlMessage: CMessage {
-    virtual EMessageType GetType() { return MSG_CONTROL; }
-    EControlCmd command;
-};
-
-struct CApplicationMessage: CMessage {
-    virtual EMessageType GetType() { return MSG_APPLICATION; }
-};
-*/
-
-struct CMessage {
-CMessage(std::string str): m_type(0), m_tag(0), m_str(str) {}
+struct CSampleMessage {
+    CSampleMessage(std::string str): m_type(0), m_tag(0), m_str(str) {}
     unsigned m_type;
     unsigned m_tag;
     std::string m_str;
     void* m_data;
 };
 
-class CSafeQueue {
-public:
-    CSafeQueue(std::string name):
-        m_name(name),
-        m_mutex(name + " queue protect mutex"),
-        m_pop_sem(name + " queue pop semahore", 0) {}
-    void Push(CMessage msg) {
-	PROTECT;
-	dataContainer.push_back(msg);
-	m_pop_sem.Put();
-    }
-    CMessage Pop() {
-	m_pop_sem.Get();
-	{
-	    PROTECT;
-	    CMessage res = dataContainer.front();
-	    dataContainer.pop_front();
-	    return res;
-	}
-    }
-    
-protected:
-    std::deque<CMessage> dataContainer;
-    std::string m_name;
-    CMutex m_mutex;
-    CSemaphore m_pop_sem;
-};
+typedef CQueue<CSampleMessage> CSafeQueue;
 
 /** Logs */
 

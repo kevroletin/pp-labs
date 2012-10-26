@@ -24,7 +24,7 @@ top_builddir =
 
 DEP_FILES=.deps/task1a.P .deps/Threads.P .deps/Threads.P .deps/task1b.P .deps/Threads.P .deps/Threads.P
 
-all: task1a task1b
+all: task1a task1b pp_tests
 
 DEPS_MAGIC := $(shell mkdir .deps > /dev/null 2>&1 || :)
 -include $(DEP_FILES)
@@ -39,7 +39,12 @@ task1a: $(task1a_OBJ)
 task1b: $(task1b_OBJ)
 	$(CXX_LINK) -o $@ $^ $(LDDEPS)
 
+.PHONY:pp_tests
+pp_tests:
+	$(MAKE) -C unit_tests
+
 tags: 
+	$(MAKE) -C unit_tests/ $(MFLAGS) $@
 
 
 clean:
@@ -51,6 +56,7 @@ dist:
 	rm -rf $(DISTDIR)
 	mkdir $(DISTDIR)
 	cp $(task1a_SOURCES) $(task1b_SOURCES) $(ede_FILES) $(DISTDIR)
+	$(MAKE) -C unit_tests $(MFLAGS) DISTDIR=$(DISTDIR)/unit_tests dist
 	tar -cvzf $(DISTDIR).tar.gz $(DISTDIR)
 	rm -rf $(DISTDIR)
 
