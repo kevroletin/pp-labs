@@ -2,6 +2,8 @@
 #include <string>
 #include <vector>
 #include "pthread.h"
+#include "semaphore.h"
+#include <cassert>
 
 /** Logs */
 
@@ -84,12 +86,13 @@ struct MixDummyLogger: MixLogger {
 };
 
 /** Default Logs */
-
+// DEBUG: 
 MixMasterLoger g_mutexLog(E_LOG_DEBUG);
-//MixMasterLoger g_EventLog;
-//MixMasterLoger g_QueueLog;
+MixMasterLoger g_semaphoreLog(E_LOG_DEBUG);
+MixMasterLoger g_EventLog;
+MixMasterLoger g_QueueLog;
 
-/** Privitives */
+/** Primitives */
 
 class CMutex: protected MixSlaveLogger {
 public:
@@ -99,6 +102,7 @@ public:
     {
         InitMutex(); 
     }
+    ~CMutex() { pthread_mutex_destroy(&m_mutex); }
     int Get() {
         LOG_DEBUG(m_name + " -");
         return pthread_mutex_lock(&m_mutex);
@@ -107,6 +111,7 @@ public:
         LOG_DEBUG(m_name + " +");
         return pthread_mutex_unlock(&m_mutex);
     }
+    std::string GetName() { return m_name; }
 protected:
     std::string m_name;
     pthread_mutex_t m_mutex;
@@ -120,6 +125,42 @@ protected:
     }
 };
 
+class CSemaphore: protected MixSlaveLogger {
+public:
+    CSemaphore(std::string name, int init_value = 0, MixLogger& masterLog = g_semaphoreLog): 
+        MixSlaveLogger(masterLog),
+        m_name(name)
+    {
+        InitMutex(init_value); 
+    }
+    ~CSemaphore() { sem_destroy(&m_sem); } 
+    int Get() {
+        LOG_DEBUG(m_name + " -");
+        return sem_wait(&m_sem);
+    }
+    int Put() {
+        LOG_DEBUG(m_name + " +");
+        return sem_post(&m_sem);
+    }
+    int GetValue() { 
+        int buff = 0;
+        assert( 0 == sem_getvalue(&m_sem, &buff) );
+        return buff;
+    }
+    void SetValue(int val) {
+        int sem_val = GetValue();
+        for (int i = 0; i < sem_val - val; ++i) Get();
+        for (int i = 0; i < val - sem_val; ++i) Put();
+    }
+    std::string GetName() { return m_name; }
+protected:
+    std::string m_name;
+    sem_t m_sem;
+    int InitMutex(int init_value) {
+        return sem_init(&m_sem, 1, init_value);
+    }
+};
+
 class CScopeMutex {
     
 };
@@ -128,8 +169,37 @@ class CEvent {
 
 };
 
-class IThreadQueue {
+enum EMessageType {
+    MSG_CONTROL,
+    MSG_APPLICATION
+};
+
+enum EControlCmd {
+    CMD_RUN,
+    CMD_SUSPEND,
+    CMD_DIE
+};
+
+struct CMessage {
+    virtual EMessageType GetType() = 0;
+};
+
+struct CControlMessage: CMessage {
+    virtual EMessageType GetType() { return MSG_CONTROL; }
+    EControlCmd command;
+};
+
+struct CApplicationMessage: CMessage {
+    virtual EMessageType GetType() { return MSG_APPLICATION; }
+};
+
+class CSafeQueue {
+public:
+    CSafeQueue(std::string name): m_name(name), m_mutex(name + " protect mutex") {}
     
+protected:
+    std::string m_name;
+    CMutex m_mutex;
 };
 
 /** IThread
@@ -144,19 +214,29 @@ public:
     void Join();
 protected:
     std::string name;
-    void RunLoop();
+    void RunLoop() {
+        
+    }
     virtual bool ProcessMessage() = 0;
 };
 
 
 int main(int argc, char* argv[])
 {
-    CMutex m("TestMutex");
-    m.Get();
-    m.Get();
-    m.Put();
-    m.Put();
-    g_mutexLog.PublishLog(std::cerr);
-    std::cerr << "Good";
+    CSemaphore s("TestSemaphore");
+    assert(0 == s.GetValue());
+    s.Put();
+    s.Put();
+    assert(2 == s.GetValue());
+    s.Get();
+    assert(1 == s.GetValue());
+    s.SetValue(4);
+    assert(4 == s.GetValue());
+    s.SetValue(0);
+    assert(0 == s.GetValue());
+
+    
+    std::cerr << "Good\n";
+    g_semaphoreLog.PublishLog(std::cerr);
     return 0;
 }
