@@ -18,6 +18,7 @@ typedef unsigned TData;
 class CSimpleArray {
 public:
     static const bool LazyFakeArrAlloc = false;
+    static const unsigned k = 10;
     
     CSimpleArray(unsigned size): m_size(size) {
         LOG("constructor");
@@ -52,13 +53,20 @@ public:
     }
     void MergeSort() {
         LOG("merge sort");
-        m_temp = new TData[m_size];
+        if (LazyFakeArrAlloc) m_temp = new TData[m_size];
         MergeSortGo(0, m_size - 1);
-        delete[] m_temp;
+        if (LazyFakeArrAlloc) {
+            delete[] m_temp;
+            m_temp = NULL;
+        }
     }
     void QuickSort() {
         LOG("quick sort");
         QuickSortGo(0, m_size - 1);
+    }
+    void InsertSort() {
+        LOG("insert sort");
+        InsertSortGo(0, m_size - 1);
     }
     bool ValidateSort() {
         bool res = true;
@@ -74,7 +82,9 @@ protected:
     TLog m_log;
 
     void MergeSortGo(unsigned fst, unsigned last) {
-        if (last > fst) {
+        if (last - fst < k) {
+            InsertSortGo(fst, last);
+        } else {
             unsigned c = (last + fst) / 2;
             MergeSortGo(fst, c);
             MergeSortGo(c + 1, last);
@@ -106,7 +116,9 @@ protected:
         }        
     }
     void QuickSortGo(unsigned fst, unsigned last) {
-        if (last > fst) {
+        if (last > fst && last - fst < k) {
+            InsertSortGo(fst, last);
+        } else if (last > fst) {
             unsigned c = Partition(fst, last);
             if (c > 0) QuickSortGo(fst, c - 1);
             QuickSortGo(c + 1, last);
@@ -114,7 +126,7 @@ protected:
     }
     unsigned Partition(unsigned fst, unsigned last) {
         Swap(last, fst + rand() % (last - fst));
-        unsigned p = m_data[last];
+        TData p = m_data[last];
         unsigned less = fst;
         unsigned more = last;
         while (less < more) {
@@ -131,6 +143,15 @@ protected:
         unsigned tmp = m_data[idx1];
         m_data[idx1] = m_data[idx2];
         m_data[idx2] = tmp;
+    }
+    void InsertSortGo(unsigned fst, unsigned last) {
+        for (unsigned i = fst + 1; i <= last; ++i) {
+            unsigned mi = i - 1;
+            for (unsigned j = i; j <= last; ++j) {
+                if (m_data[j] < m_data[mi]) mi = j;
+            }
+            Swap(mi, i - 1);
+        }
     }
 };
 

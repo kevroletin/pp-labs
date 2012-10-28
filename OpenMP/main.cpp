@@ -4,10 +4,10 @@ int main()
 {
     CSimpleArray arr(10);
     //    arr.FillDec();
-    //    arr.FillInc();
-    arr.FillRand();
+        arr.FillInc();
+    //arr.FillRand();
     std::cerr << arr << "\n";
-    arr.QuickSort();
+    arr.InsertSort();
     std::cerr << arr << "\n";
     arr.GetLog().PublishLog(std::cerr);
     arr.ValidateSort();

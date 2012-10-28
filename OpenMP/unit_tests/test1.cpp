@@ -31,12 +31,14 @@ void ok(bool res) {
 enum ESortMethod {
     EMerge,
     EQuick,
+    EInsert,
     LastSortMethod
 };
 
 std::string sortMethodStr[] = {
     "MergeSort",
     "QuickSort",
+    "InsertSort",
     "LastSortMethod"
 };
 
@@ -48,6 +50,9 @@ void RunSort(CSimpleArray& arr, ESortMethod sort) {
     case EQuick: {
         arr.QuickSort();
     }break;
+    case EInsert: {
+        arr.InsertSort();
+    } break;
     default: {
         throw("Bad thing");
     }
