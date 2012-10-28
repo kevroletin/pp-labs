@@ -1,0 +1,16 @@
+;; Object open_mp
+;; EDE Project Files are auto generated: Do Not Edit
+(ede-proj-project "open_mp"
+  :file "Project.ede"
+  :name "open_mp"
+  :targets (list 
+   (ede-proj-target-makefile-program "main.out"
+    :name "main.out"
+    :path ""
+    :source '("main.cpp" "log.cpp")
+    :auxsource '("log.h")
+    )
+   )
+  :variables '(("CFLAGS" . "$(USERFLAGS) -Wall"))
+  :configuration-variables 'nil
+  )

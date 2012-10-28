@@ -1,0 +1,16 @@
+;; Object test1
+;; EDE Project Files are auto generated: Do Not Edit
+(ede-proj-project "test1"
+  :file "Project.ede"
+  :name "test1"
+  :targets (list 
+   (ede-proj-target-makefile-program "test1.out"
+    :name "test1.out"
+    :path ""
+    :source '("test1.cpp" "../log.cpp")
+    :auxsource '("../log.h" "../array.h")    
+    )
+   )
+  :variables '(("CFLAGS" . "-Wall"))
+  :configuration-variables 'nil
+  )
