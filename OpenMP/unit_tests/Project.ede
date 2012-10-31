@@ -7,8 +7,8 @@
    (ede-proj-target-makefile-program "test1.out"
     :name "test1.out"
     :path ""
-    :source '("test1.cpp" "../log.cpp")
-    :auxsource '("../log.h" "../array.h")
+    :source '("test1.cpp")
+    :auxsource '("../array.h")
     )
    )
   :variables '(("CFLAGS" . "-Wall -fopenmp"))

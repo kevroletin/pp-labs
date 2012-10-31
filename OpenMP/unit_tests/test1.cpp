@@ -76,50 +76,53 @@ int main() {
     ok(0);
 #endif
     srand(time(NULL));
-    for (int j = 0; j < LastSortMethod; ++j) {
-        baseName(sortMethodStr[j]);
-        ESortMethod sortAlg = static_cast<ESortMethod>(j);
-
-        name("Self check");
-        for (unsigned i = 0; i < 6; ++i) {
-            unsigned size = sizes[j][i];
-            if (size == 0) continue;
-            {
-                CSimpleArray arr(size);
-                arr.FillDec();
-                RunSort( arr, sortAlg );
-                ok( arr.ValidateSort() );
-            }
-            {
-                CSimpleArray arr(size);
-                arr.FillInc();
-                RunSort( arr, sortAlg );
-                ok( arr.ValidateSort() );
-            }    
-            {
-                CSimpleArray arr(size);
-                arr.FillRand();
-                RunSort( arr, sortAlg );
-                ok( arr.ValidateSort() );
-            }
-        }
+    for (unsigned k = 0; k < 3; ++k) {
+        ESortFinOptimization sortOpt = static_cast<ESortFinOptimization>(k);
+        for (int j = 0; j < LastSortMethod; ++j) {
+            baseName(sortMethodStr[j]);
+            ESortMethod sortAlg = static_cast<ESortMethod>(j);
         
-        name("compare with vector");
-        for (unsigned i = 0; i < 6; ++i) {
-            unsigned size = sizes[j][i];
-            if (size > 0) {
-                CSimpleArray arr(size);
-                std::vector<TData> vec(size);
-                for (unsigned i = 0; i < size; ++i) {
+            name("Self check");
+            for (unsigned i = 0; i < 6; ++i) {
+                unsigned size = sizes[j][i];
+                if (size == 0) continue;
+                {
+                    CSimpleArray arr(size, sortOpt);
+                    arr.FillDec();
+                    RunSort( arr, sortAlg );
+                    ok( arr.ValidateSort() );
+                }
+                {
+                    CSimpleArray arr(size, sortOpt);
+                    arr.FillInc();
+                    RunSort( arr, sortAlg );
+                    ok( arr.ValidateSort() );
+                }    
+                {
+                    CSimpleArray arr(size, sortOpt);
+                    arr.FillRand();
+                    RunSort( arr, sortAlg );
+                    ok( arr.ValidateSort() );
+                }
+            }
+            
+            name("compare with vector");
+            for (unsigned i = 0; i < 6; ++i) {
+                unsigned size = sizes[j][i];
+                if (size > 0) {
+                    CSimpleArray arr(size, sortOpt);
+                    std::vector<TData> vec(size);
+                    for (unsigned i = 0; i < size; ++i) {
                     arr[i] = vec[i] = rand();
+                    }
+                    sort(vec.begin(), vec.end());
+                    RunSort( arr, sortAlg );
+                    bool same = true;
+                    for (unsigned i = 0; i < size; ++i) {
+                        same &= vec[i] == arr[i];
+                    }
+                    ok( same );
                 }
-                sort(vec.begin(), vec.end());
-                RunSort( arr, sortAlg );
-                bool same = true;
-                for (unsigned i = 0; i < size; ++i) {
-                    same &= vec[i] == arr[i];
-                }
-                ok( same );
             }
         }
     }

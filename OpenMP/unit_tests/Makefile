@@ -10,8 +10,8 @@ CFLAGS=-Wall -fopenmp
 top=../
 ede_FILES=Project.ede Makefile
 
-test1_out_SOURCES=test1.cpp ../log.cpp
-test1.out_OBJ= test1.o ../log.o
+test1_out_SOURCES=test1.cpp
+test1.out_OBJ= test1.o
 CXX= g++
 CXX_COMPILE=$(CXX) $(DEFS) $(INCLUDES) $(CPPFLAGS) $(CFLAGS)
 CXX_DEPENDENCIES=-Wp,-MD,.deps/$(*F).P
@@ -20,7 +20,7 @@ VERSION=1.0
 DISTDIR=$(top)open_mp-$(VERSION)/unit_tests
 top_builddir = ..
 
-DEP_FILES=.deps/test1.P .deps/log.P .deps/log.P .deps/array.P
+DEP_FILES=.deps/test1.P .deps/array.P
 
 all: test1.out
 

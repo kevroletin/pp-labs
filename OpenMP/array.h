@@ -10,20 +10,31 @@ typedef unsigned TData;
 //#define LOG(str) std::cerr << str << "\n";
 
 //template <class TData> dislike templated due to lazy code generation
+enum ESortFinOptimization {
+    EOptFinInsert,
+    EOptFinQsort,
+    EOptFinMerge,
+};
+
 class CSimpleArray {
 public:
     static const bool LazyFakeArrAlloc = false;
-    static const unsigned k = 10;
-    
-    CSimpleArray(unsigned size): m_size(size) {
+
+    CSimpleArray(unsigned size, ESortFinOptimization optimization = EOptFinInsert): 
+        m_size(size),
+        m_k(10),
+        m_optimization(optimization)
+    {
         LOG("constructor");
-        m_data = new TData[m_size];
-        if (LazyFakeArrAlloc) {
-            m_temp = NULL;
-        } else {
-            m_temp = new TData[m_size];
-            for (unsigned i = 0; i < m_size; ++i) m_temp[i] = 0;
-        }
+        InitArrays();
+    }
+    CSimpleArray(unsigned size, unsigned k, ESortFinOptimization optimization = EOptFinInsert): 
+        m_size(size),
+        m_k(k),
+        m_optimization(optimization)
+    {
+        LOG("constructor");
+        InitArrays();
     }
     ~CSimpleArray() {
         delete[] m_data;
@@ -56,7 +67,7 @@ public:
 /* create team of threads */
 #pragma omp parallel sections       
         {
-            MergeSortGo(0, m_size - 1);
+            MergeSortParallelGo(0, m_size - 1);
         }
         if (LazyFakeArrAlloc) {
             delete[] m_temp;
@@ -68,7 +79,7 @@ public:
 /* create team of threads */
 #pragma omp parallel sections
         {
-            QuickSortGo(0, m_size - 1);
+            QuickSortParallelGo(0, m_size - 1);
         }
     }
     void InsertSort() {
@@ -81,29 +92,67 @@ public:
             res &= this->Get(i - 1) <= this->Get(i);
         return res;
     }
+    void SetOptimization(ESortFinOptimization optimization) {
+        m_optimization = optimization;
+    }
 protected:
     unsigned m_size;
     TData* m_data;
     TData* m_temp;
+    unsigned m_k;
+    ESortFinOptimization m_optimization;
 
-    void MergeSortGo(unsigned fst, unsigned last) {
-        if (last - fst < k) {
-            InsertSortGo(fst, last);
+    void InitArrays() {
+        m_data = new TData[m_size];
+        if (LazyFakeArrAlloc) {
+            m_temp = NULL;
         } else {
+            m_temp = new TData[m_size];
+            for (unsigned i = 0; i < m_size; ++i) m_temp[i] = 0;
+        }
+    }
+    void OptimizationGo(unsigned fst, unsigned last) {
+        switch (m_optimization) {
+        case EOptFinInsert: {
+            InsertSortGo(fst, last);
+        } break;
+        case EOptFinQsort: {
+            QuickSortGo(fst, last);
+        } break;
+        case EOptFinMerge: {
+            MergeSortGo(fst, last);
+        } break;
+        default: {
+            assert(0);
+        }
+        }
+    }
+    void MergeSortParallelGo(unsigned fst, unsigned last) {
+        if (last > fst && last - fst < m_k) {
+            OptimizationGo(fst, last);
+        } else if (last > fst) {
             unsigned c = (last + fst) / 2;
             {
 /* dispatch task to thread */
 #pragma omp task
-                MergeSortGo(fst, c);
+                MergeSortParallelGo(fst, c);
 /* dispatch task to thread */
 #pragma omp task
-                MergeSortGo(c + 1, last);
+                MergeSortParallelGo(c + 1, last);
             }
 /* wait task's results */
 #pragma omp taskwait
             Merge(fst, c, last);
         }
     }
+    void MergeSortGo(unsigned fst, unsigned last) {
+        if (last > fst) {
+            unsigned c = (last + fst) / 2;
+            MergeSortGo(fst, c);
+            MergeSortGo(c + 1, last);
+            Merge(fst, c, last);
+        }
+    }    
     void Merge(unsigned fst, unsigned lastFst, unsigned lastSnd) {
         for (unsigned i = fst; i <= lastSnd; ++i) {
             m_temp[i] = m_data[i];
@@ -128,19 +177,26 @@ protected:
             ++snd;
         }        
     }
-    void QuickSortGo(unsigned fst, unsigned last) {
-        if (last > fst && last - fst < k) {
-            InsertSortGo(fst, last);
+    void QuickSortParallelGo(unsigned fst, unsigned last) {
+        if (last > fst && last - fst < m_k) {
+            OptimizationGo(fst, last);
         } else if (last > fst) {
             unsigned c = Partition(fst, last);
             {
 /* dispatch task to thread */
 #pragma omp task
-                if (c > 0) QuickSortGo(fst, c - 1);
+                if (c > 0) QuickSortParallelGo(fst, c - 1);
 /* dispatch task to thread */
 #pragma omp task
-                QuickSortGo(c + 1, last);
+                QuickSortParallelGo(c + 1, last);
             }
+        }
+    }
+    void QuickSortGo(unsigned fst, unsigned last) {
+        if (last > fst) {
+            unsigned c = Partition(fst, last);
+            if (c > 0) QuickSortGo(fst, c - 1);
+            QuickSortGo(c + 1, last);
         }
     }
     unsigned Partition(unsigned fst, unsigned last) {

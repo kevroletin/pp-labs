@@ -29,9 +29,6 @@ double RunSort(CSimpleArray& arr, ESortMethod sort) {
     case EQuick: {
         arr.QuickSort();
     }break;
-    case EInsert: {
-        arr.InsertSort();
-    } break;
     default: {
         throw("Bad thing");
     }
@@ -40,8 +37,7 @@ double RunSort(CSimpleArray& arr, ESortMethod sort) {
     return diff_to_sec(&tv1, &tv2);
 }
 
-double RunManyTimes(unsigned runs, unsigned arrSize, ESortMethod sort) {
-    CSimpleArray arr(arrSize);
+double RunManyTimes(CSimpleArray& arr, unsigned runs, ESortMethod sort) {
     arr.FillRand();
     double result = 0;
     for (unsigned i = 0; i < runs; ++i) {
@@ -62,8 +58,7 @@ void openFiles(std::ofstream& fq, std::ofstream& fm, unsigned num) {
 unsigned sizes[] = { 1000, 10000, 10000000 };
 unsigned runs[]  = { 500,  10,    2 };
 
-int main()
-{
+void DetermineBestThreadsNum() {
     for (unsigned i = 0; i < 3; ++i) {
         std::ofstream fquick, fmerge;
         openFiles(fquick, fmerge, i);
@@ -72,14 +67,48 @@ int main()
         unsigned repeatCnt = runs[i];
         std::cerr << "Array size: " << arrSize;
         for (int tnum = 1; tnum < 30; ++ tnum) {
+            CSimpleArray arr(arrSize);
             omp_set_num_threads(tnum);
             std::cerr << "*";
-            fmerge << tnum << " " << RunManyTimes(repeatCnt, arrSize, EMerge) << "\n";
-            fquick << tnum << " " << RunManyTimes(repeatCnt, arrSize, EQuick) << "\n";
+            fmerge << tnum << " " << RunManyTimes(arr, repeatCnt, EMerge) << "\n";
+            fquick << tnum << " " << RunManyTimes(arr, repeatCnt, EQuick) << "\n";
         }
         std::cerr << "\n";
         fquick.close();
         fmerge.close();
     }
+}
+
+std::string optimizationToStr[] = {
+    "Insert",
+    "Qsort",
+    "Merge"
+};
+
+void DetermineBestK() {
+    for (unsigned i = 0; i < 3; ++i) {
+        ESortFinOptimization sortOpt = static_cast<ESortFinOptimization>(i);
+        std::ofstream fquick, fmerge;
+        openFiles(fquick, fmerge, i);
+        for (int k = 1; k < 50; k += 5) {
+            CSimpleArray arr(10000000, k, sortOpt);
+            unsigned repeatCnt = 1;
+            std::cerr << "K: " << k;
+            omp_set_num_threads(4);
+            fquick << k << " " << RunManyTimes(arr, repeatCnt, EQuick) << "\n";
+            fmerge << k << " " << RunManyTimes(arr, repeatCnt, EMerge) << "\n";
+            std::cerr << "\n";
+        }
+        fquick.close();
+        fmerge.close();
+    }
+}
+
+int main()
+{
+    DetermineBestK();
+    // TODO: add interface to choose
+    //DetermineBestThreadsNum()
     return 0;
 }
+
