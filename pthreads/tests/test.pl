@@ -12,7 +12,7 @@ for (glob("*.in")) {
 
 my $total_ok = 1;
 for my $t (sort keys %tests) {
-    my $cmd = "../task1b ";
+    my $cmd = "../task1b.out ";
     for my $s (sort keys %{$tests{$t}}) {
         $cmd .= ' ' . $tests{$t}{$s};
     }

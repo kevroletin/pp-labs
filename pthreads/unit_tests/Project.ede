@@ -5,7 +5,7 @@
   :name "pp_tests"
   :targets (list 
    (ede-proj-target-makefile-program "queue"
-    :name "queue"
+    :name "queue.out"
     :path ""
     :source '("queue.cpp" "../Threads.cpp")
     :auxsource '("../Threads.h")

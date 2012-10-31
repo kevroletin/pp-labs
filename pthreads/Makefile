@@ -10,21 +10,21 @@ CFLAGS=-pthread
 top="$(CURDIR)"/
 ede_FILES=Project.ede Makefile
 
-task1a_SOURCES=task1a.cpp Threads.cpp
-task1a_OBJ= task1a.o Threads.o
+task1a_out_SOURCES=task1a.cpp Threads.cpp
+task1a.out_OBJ= task1a.o Threads.o
 CXX= g++
 CXX_COMPILE=$(CXX) $(DEFS) $(INCLUDES) $(CPPFLAGS) $(CFLAGS)
 CXX_DEPENDENCIES=-Wp,-MD,.deps/$(*F).P
 CXX_LINK=$(CXX) $(CFLAGS) $(LDFLAGS) -L.
-task1b_SOURCES=task1b.cpp Threads.cpp
-task1b_OBJ= task1b.o Threads.o
+task1b_out_SOURCES=task1b.cpp Threads.cpp
+task1b.out_OBJ= task1b.o Threads.o
 VERSION=1.0
-DISTDIR=$(top)pp_task1-$(VERSION)
+DISTDIR=$(top)-$(VERSION)
 top_builddir = 
 
-DEP_FILES=.deps/task1a.P .deps/Threads.P .deps/Threads.P .deps/task1b.P .deps/Threads.P .deps/Threads.P
+DEP_FILES=.deps/task1a.P .deps/Threads.P .deps/Threads.P .deps/task1b.P .deps/Threads.P
 
-all: task1a task1b pp_tests
+all: task1a.out task1b.out pp_tests
 
 DEPS_MAGIC := $(shell mkdir .deps > /dev/null 2>&1 || :)
 -include $(DEP_FILES)
@@ -33,10 +33,10 @@ DEPS_MAGIC := $(shell mkdir .deps > /dev/null 2>&1 || :)
 	@echo '$(CXX_COMPILE) -c $<'; \
 	$(CXX_COMPILE) $(CXX_DEPENDENCIES) -o $@ -c $<
 
-task1a: $(task1a_OBJ)
+task1a.out: $(task1a.out_OBJ)
 	$(CXX_LINK) -o $@ $^ $(LDDEPS)
 
-task1b: $(task1b_OBJ)
+task1b.out: $(task1b.out_OBJ)
 	$(CXX_LINK) -o $@ $^ $(LDDEPS)
 
 .PHONY:pp_tests
@@ -55,7 +55,7 @@ clean:
 dist:
 	rm -rf $(DISTDIR)
 	mkdir $(DISTDIR)
-	cp $(task1a_SOURCES) $(task1b_SOURCES) $(ede_FILES) $(DISTDIR)
+	cp $(task1a_out_SOURCES) $(task1b_out_SOURCES) $(ede_FILES) $(DISTDIR)
 	$(MAKE) -C unit_tests $(MFLAGS) DISTDIR=$(DISTDIR)/unit_tests dist
 	tar -cvzf $(DISTDIR).tar.gz $(DISTDIR)
 	rm -rf $(DISTDIR)
