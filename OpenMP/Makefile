@@ -5,13 +5,13 @@
 # EDE is the Emacs Development Environment.
 # http://cedet.sourceforge.net/ede.shtml
 #
-CFLAGS=$(USERFLAGS) -Wall
+CFLAGS=$(USERFLAGS) -Wall -fopenmp
 
 top="$(CURDIR)"/
 ede_FILES=Project.ede Makefile
 
-main_out_SOURCES=main.cpp log.cpp
-main.out_OBJ= main.o log.o
+main_out_SOURCES=main.cpp
+main.out_OBJ= main.o
 CXX= g++
 CXX_COMPILE=$(CXX) $(DEFS) $(INCLUDES) $(CPPFLAGS) $(CFLAGS)
 CXX_DEPENDENCIES=-Wp,-MD,.deps/$(*F).P
@@ -20,7 +20,7 @@ VERSION=1.0
 DISTDIR=$(top)open_mp-$(VERSION)
 top_builddir = 
 
-DEP_FILES=.deps/main.P .deps/log.P .deps/log.P
+DEP_FILES=.deps/main.P .deps/array.P
 
 all: main.out test1
 

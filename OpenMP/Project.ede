@@ -7,10 +7,10 @@
    (ede-proj-target-makefile-program "main.out"
     :name "main.out"
     :path ""
-    :source '("main.cpp" "log.cpp")
-    :auxsource '("log.h")
+    :source '("main.cpp")
+    :auxsource '("array.h")
     )
    )
-  :variables '(("CFLAGS" . "$(USERFLAGS) -Wall"))
+  :variables '(("CFLAGS" . "$(USERFLAGS) -Wall -fopenmp"))
   :configuration-variables 'nil
   )

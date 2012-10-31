@@ -1,18 +1,13 @@
-#include "log.h"
-
 #include <iostream>
 #include <cassert>
 #include <sstream>
 #include <cstdlib>
+#include <omp.h>
 
 typedef unsigned TData;
 
+#define LOG(str)
 //#define LOG(str) std::cerr << str << "\n";
-#define LOG(str) TLogHelper L(m_log, str);
-
-#define DEBUG_LOG(str)
-//#define DEBUG_LOG(str) std::cerr << "[DEBUG]" << str << "\n";
-//#define DEBUG_LOG(str) TLogHelper L(m_log, std::string("[DEBUG]") + str);
 
 //template <class TData> dislike templated due to lazy code generation
 class CSimpleArray {
@@ -29,6 +24,10 @@ public:
             m_temp = new TData[m_size];
             for (unsigned i = 0; i < m_size; ++i) m_temp[i] = 0;
         }
+    }
+    ~CSimpleArray() {
+        delete[] m_data;
+        if (!LazyFakeArrAlloc) delete[] m_temp;
     }
     void RandomInit() {
 
@@ -54,7 +53,11 @@ public:
     void MergeSort() {
         LOG("merge sort");
         if (LazyFakeArrAlloc) m_temp = new TData[m_size];
-        MergeSortGo(0, m_size - 1);
+/* create team of threads */
+#pragma omp parallel sections       
+        {
+            MergeSortGo(0, m_size - 1);
+        }
         if (LazyFakeArrAlloc) {
             delete[] m_temp;
             m_temp = NULL;
@@ -62,7 +65,11 @@ public:
     }
     void QuickSort() {
         LOG("quick sort");
-        QuickSortGo(0, m_size - 1);
+/* create team of threads */
+#pragma omp parallel sections
+        {
+            QuickSortGo(0, m_size - 1);
+        }
     }
     void InsertSort() {
         LOG("insert sort");
@@ -74,20 +81,26 @@ public:
             res &= this->Get(i - 1) <= this->Get(i);
         return res;
     }
-    TLog GetLog() { return m_log; }
 protected:
     unsigned m_size;
     TData* m_data;
     TData* m_temp;
-    TLog m_log;
 
     void MergeSortGo(unsigned fst, unsigned last) {
         if (last - fst < k) {
             InsertSortGo(fst, last);
         } else {
             unsigned c = (last + fst) / 2;
-            MergeSortGo(fst, c);
-            MergeSortGo(c + 1, last);
+            {
+/* dispatch task to thread */
+#pragma omp task
+                MergeSortGo(fst, c);
+/* dispatch task to thread */
+#pragma omp task
+                MergeSortGo(c + 1, last);
+            }
+/* wait task's results */
+#pragma omp taskwait
             Merge(fst, c, last);
         }
     }
@@ -120,8 +133,14 @@ protected:
             InsertSortGo(fst, last);
         } else if (last > fst) {
             unsigned c = Partition(fst, last);
-            if (c > 0) QuickSortGo(fst, c - 1);
-            QuickSortGo(c + 1, last);
+            {
+/* dispatch task to thread */
+#pragma omp task
+                if (c > 0) QuickSortGo(fst, c - 1);
+/* dispatch task to thread */
+#pragma omp task
+                QuickSortGo(c + 1, last);
+            }
         }
     }
     unsigned Partition(unsigned fst, unsigned last) {

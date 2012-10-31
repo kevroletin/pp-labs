@@ -59,16 +59,31 @@ void RunSort(CSimpleArray& arr, ESortMethod sort) {
     }
 }
 
+unsigned sizes[][6] = {
+  { 10, 100, 500, 1000, 50000, 10000 },
+  { 10, 100, 500, 1000, 50000, 10000 },
+  { 10, 100, 500, 1000, 0, 0 }
+};
+
 int main() {
+    baseName("init");
+    name("check is OpenMP enabled");
+#ifdef _OPENMP
+    omp_set_num_threads(2);
+    ok(1);
+#else
+#   warning "OpenMP disabled"
+    ok(0);
+#endif
     srand(time(NULL));
     for (int j = 0; j < LastSortMethod; ++j) {
         baseName(sortMethodStr[j]);
         ESortMethod sortAlg = static_cast<ESortMethod>(j);
-        unsigned sizes[6] = { 10, 100, 500, 1000, 50000, 10000 };
 
         name("Self check");
         for (unsigned i = 0; i < 6; ++i) {
-            unsigned size = sizes[i];
+            unsigned size = sizes[j][i];
+            if (size == 0) continue;
             {
                 CSimpleArray arr(size);
                 arr.FillDec();
@@ -91,8 +106,8 @@ int main() {
         
         name("compare with vector");
         for (unsigned i = 0; i < 6; ++i) {
-            unsigned size = sizes[i];
-            {
+            unsigned size = sizes[j][i];
+            if (size > 0) {
                 CSimpleArray arr(size);
                 std::vector<TData> vec(size);
                 for (unsigned i = 0; i < size; ++i) {

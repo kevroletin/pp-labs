@@ -8,9 +8,9 @@
     :name "test1.out"
     :path ""
     :source '("test1.cpp" "../log.cpp")
-    :auxsource '("../log.h" "../array.h")    
+    :auxsource '("../log.h" "../array.h")
     )
    )
-  :variables '(("CFLAGS" . "-Wall"))
+  :variables '(("CFLAGS" . "-Wall -fopenmp"))
   :configuration-variables 'nil
   )
