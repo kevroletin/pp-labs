@@ -3,6 +3,7 @@
 #include <cassert>
 #include <sstream>
 
+
 class CPipe: public CBasicThread {
 public:
     CPipe(std::string name): CBasicThread(name), m_in(NULL), m_out(NULL) {}
