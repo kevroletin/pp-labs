@@ -1,0 +1,16 @@
+;; Object main.out
+;; EDE Project Files are auto generated: Do Not Edit
+(ede-proj-project "main.out"
+  :file "Project.ede"
+  :name "main.out"
+  :targets (list 
+   (ede-proj-target-makefile-program "main.out"
+    :name "main.out"
+    :path ""
+    :source '("main.cpp" "mpi_helpers.cpp")
+    :auxsource '("mpi_helpers.h")
+    )
+   )
+  :variables '(("CFLAGS" . "-Wall $(shell mpic++ --showme:compile)") ("LDFLAGS" . "-Wall $(shell mpic++ --showme:link)"))
+  :configuration-variables 'nil
+  )
