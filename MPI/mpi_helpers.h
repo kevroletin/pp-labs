@@ -2,7 +2,6 @@
 #define _MPI_HELPERS
 
 #include "mpi.h"
-#include "log.h"
 
 #include <list>
 #include <ctime>
@@ -10,7 +9,7 @@
 #include <sstream>
 #include <cstring>
 
-#define STDERR_LOG_DUMP
+//#define STDERR_LOG_DUMP
 
 typedef unsigned uint;
 typedef unsigned char uchar;

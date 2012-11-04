@@ -8,7 +8,7 @@
     :name "main.out"
     :path ""
     :source '("main.cpp" "mpi_helpers.cpp")
-    :auxsource '("mpi_helpers.h")
+    :auxsource '("mpi_helpers.h" "labyrinth.h")
     )
    )
   :variables '(("CFLAGS" . "-Wall $(shell mpic++ --showme:compile)") ("LDFLAGS" . "-Wall $(shell mpic++ --showme:link)"))

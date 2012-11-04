@@ -1,0 +1,16 @@
+;; Object 
+;; EDE Project Files are auto generated: Do Not Edit
+(ede-proj-project ""
+  :file "Project.ede"
+  :name ""
+  :targets (list 
+   (ede-proj-target-makefile-program "t1.out"
+    :name "t1.out"
+    :path ""
+    :source '("t1.cpp" "../mpi_helpers.cpp")
+    :auxsource '("../mpi_helpers.h" "../labyrinth.h")
+    )
+   )
+  :variables '(("CFLAGS" . "-ggdb -Wall $(shell mpic++ --showme:compile)") ("LDFLAGS" . "-ggdb -Wall $(shell mpic++ --showme:link)"))
+  :configuration-variables 'nil
+  )
