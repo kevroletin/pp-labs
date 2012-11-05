@@ -18,7 +18,13 @@ typedef unsigned uint;
         ss << data;                              \
         Log(ss.str());                           \
     }
-
+#if 0
+#    define AlgoLog(str) Log(str)
+#    define AlgoLogEx(data) LogEx(data)
+#else
+#    define AlgoLog(str)
+#    define AlgoLogEx(data)
+#endif
 
 enum ESide { ETop, ERight, EBottom, ELeft };
 extern int moveDx[];
@@ -105,6 +111,11 @@ struct CSize {
     bool operator==(const CSize& s) { return m_x == s.m_x && m_y == s.m_y; }
 };
 
+inline std::ostream& operator<<(std::ostream& out, CSize size)
+{
+    out << "x: " << size.m_x << " y: " << size.m_y;
+    return out;
+}
 std::ostream& operator<<(std::ostream& out, CSideCoord coord);
 
 const uint Empty = 0;
@@ -114,9 +125,19 @@ const uint Fin   = 3;
 
 struct CMatrix {
     uint& Get(uint x, uint y) {
+        if (x >= m_dim.m_x || y >= m_dim.m_y) {
+            std::stringstream ss;
+            ss << "Error: dim " << m_dim << "; requested: " << CPointCoord(x, y);
+            throw ss.str();
+        }
         return m_data[y*m_dim.m_x + x];
     }
-    uint Get(uint x, uint y) const {
+    uint GetConst(uint x, uint y) const {
+        if (x >= m_dim.m_x || y >= m_dim.m_y) {
+            std::stringstream ss;
+            ss << "Error: dim " << m_dim << "; requested: " << CPointCoord(x, y);
+            throw ss.str();
+        }
         return m_data[y*m_dim.m_x + x];
     }
     void Resize(CSize dim, uint value = 0) {
@@ -130,7 +151,7 @@ struct CMatrix {
     void Dump(std::ostream& out) const {
         for (uint i = 0; i < m_dim.m_y; ++i) {
             for (uint j = 0; j < m_dim.m_x; ++j) {
-                uint v = Get(j, i);
+                uint v = GetConst(j, i);
                 if (v == (uint)-1) {
                     out << "# ";
                 } else {
@@ -144,7 +165,7 @@ struct CMatrix {
         if (!(m_dim == m.m_dim)) return false;
         for (uint y = 0; y < m_dim.m_y; ++y) {
             for (uint x = 0; x < m_dim.m_x; ++x) {
-                if (Get(x, y) != m.Get(x, y)) return false;
+                if (GetConst(x, y) != m.GetConst(x, y)) return false;
             }
         }
         return true;
@@ -226,22 +247,22 @@ public:
         m_data.Resize(size, -1);
     }
     std::string GetSymbol(uint x, uint y) const { 
-        uint t = GetType(x, y);
+        uint t = GetTypeConst(x, y);
         if (Full  == t) return "#";
         if (Start == t) return "S";
         if (Fin   == t) return "F";
-        if ((uint)-1 == GetData(x, y)) return "-";
+        if ((uint)-1 == GetDataConst(x, y)) return "-";
         std::stringstream ss;
-        ss << GetData(x, y);
+        ss << GetDataConst(x, y);
         return ss.str();
     }
     CMatrix& GetType() { return m_type; }
     uint& GetType(uint x, uint y) { return m_type.Get(x, y); }
-    uint  GetType(uint x, uint y) const { return m_type.Get(x, y); }
+    uint  GetTypeConst(uint x, uint y) const { return m_type.GetConst(x, y); }
     uint& GetType(CPointCoord p) { return m_type.Get(p.m_x, p.m_y); }
     CMatrix& GetData() { return m_data; }
     uint& GetData(uint x, uint y) { return m_data.Get(x, y); }
-    uint  GetData(uint x, uint y) const { return m_data.Get(x, y); }
+    uint  GetDataConst(uint x, uint y) const { return m_data.GetConst(x, y); }
     uint& GetData(CPointCoord p) { return m_data.Get(p.m_x, p.m_y); }
     
     void Dump(std::ostream& out, bool pretty = true) const {
@@ -268,9 +289,9 @@ public:
         return true; */
     }
     virtual bool GetWay(uint value, CPointCoord coord, std::string& way) {
-        LogEx("GetWay " << value << " | " << coord);
+        { LogEx("GetWay " << value << " | " << coord); }
         if (value == (uint)-1) value = GetData(coord) + 1;
-
+        
         if (!m_size.Inside(coord)) {
             Log("Go outside");
             return m_comm->GetWay(value, m_size.ToSideCoord(coord), way);
@@ -294,7 +315,7 @@ public:
         way.resize(way.size() - 1);
         return false;
     }
-    virtual CSize GetSize() { return m_size; }
+    CSize GetSize() { return m_size; }
     bool operator ==(const CSquareField& f) {
         return m_size == f.m_size && 
                m_type == f.m_type &&
@@ -340,12 +361,17 @@ protected:
         }
     }
     bool GoDFS(uint currDist, int x, int y) {
+        AlgoLogEx("GoDFS" << " x: " << x << " y: " << y);
         if (m_size.Inside(x, y)) {
             if (Fin == GetType(x, y)) {
+                AlgoLogEx("Look at me\n" << GetData());
+                AlgoLogEx("GoDFS: Fin found x: " << x << " y: " << y);
                 GetData(x, y) = currDist;
+                AlgoLog("GoDFS: updated fin value");
                 return true;
             }
             if (m_type.Get(x, y) != Full && currDist < m_data.Get(x, y)) {
+                AlgoLog("GoDFS: update");
                 m_data.Get(x, y) = currDist;
                 return
                     GoDFS(currDist + 1, x - 1, y    ) ||
@@ -354,7 +380,7 @@ protected:
                     GoDFS(currDist + 1, x,     y - 1);
             }
         } else {
-            LogEx("Go outside " << CPointCoord(x, y));
+            AlgoLogEx("Go outside " << CPointCoord(x, y));
             assert(NULL != m_comm);
             return m_comm->Go(currDist, m_size.ToSideCoord(x, y));
         }
@@ -509,6 +535,12 @@ protected:
     
 };
 
+inline std::ostream& operator<<(std::ostream& out, CFieldReder& reader)
+{
+    reader.Dump(out);
+    return out;
+}
+
 struct CMpiConnections {
     CMpiConnections() {}
     CMpiConnections(uint gridSize, CPointCoord top, CPointCoord right, CPointCoord bottom, CPointCoord left) {
@@ -523,7 +555,7 @@ struct CMpiConnections {
         m_bottomRank = bottomRank;
         m_leftRank = leftRank;
     }    
-    int GridCoordToRank(uint gridSize, CPointCoord p) {
+    static int GridCoordToRank(uint gridSize, CPointCoord p) {
         return CSize(gridSize, gridSize).Inside(p) ?
             1 + gridSize * p.m_y + p.m_x : 
             0;

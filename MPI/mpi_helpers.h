@@ -35,9 +35,12 @@ enum ECommands {
     CMD_SEND_ANS,
     CMD_SEND_INPUT_DATA,
     CMD_GO,
+    CMD_FIN_FOUND,
+    CMD_NO_FIN,
+    CMD_START_FIND_WAY,
     CMD_FIND_WAY,
+    CMD_SEND_WAY,
     CMD_NO_WAY,
-    CMD_SEND_WAY
 };
 
 static std::string cmdToStr[] = {
@@ -46,6 +49,13 @@ static std::string cmdToStr[] = {
     "CMD_SEND_TASK",
     "CMD_SEND_ANS",
     "CMD_SEND_INPUT_DATA",
+    "CMD_GO",
+    "CMD_FIN_FOUND",
+    "CMD_NO_FIN",
+    "CMD_START_FIND_WAY",
+    "CMD_FIND_WAY",
+    "CMD_SEND_WAY",
+    "CMD_NO_WAY"
 };
 
 struct CLogedItem {
@@ -116,25 +126,30 @@ class CMpiConnections;
 class CSquareField;
 class CMatrix;
 class CSideCoord;
+class CPointCoord;
 
 struct MixMpiHelper: virtual public IHaveRank, virtual public ILogger {
     void SendCmd(unsigned cmd, int destTask = 0);
     ECommands RecieveCmd(int sourceTask = 0, MPI_Status* pStatus = NULL);
     void RecieveAndCheckCmd(ECommands cmd, int sourceTask = 0, MPI_Status* pStatus = NULL);
-    void GetData(unsigned& result, int sourceTask = 0, MPI_Status* pStatus = NULL);
-    void GetData(int&      result, int sourceTask = 0, MPI_Status* pStatus = NULL);
-    void GetData(double&   result, int sourceTask = 0, MPI_Status* pStatus = NULL);
-    void GetData(CMpiConnections& result, int sourceTask = 0, MPI_Status* pStatus = NULL);
-    void GetData(CSquareField&    result, int sourceTask = 0, MPI_Status* pStatus = NULL);
-    void GetData(CMatrix&         result, int sourceTask = 0, MPI_Status* pStatus = NULL);
-    void GetData(CSideCoord&      result, int sourceTask = 0, MPI_Status* pStatus = NULL);
-    void SendData(unsigned data, int destTask = 0);
-    void SendData(int      data, int destTask = 0);
-    void SendData(double   data, int destTask = 0);
-    void SendData(CMpiConnections data, int destTask = 0);
-    void SendData(CSquareField&   data, int destTask = 0);
-    void SendData(CMatrix         data, int destTask = 0);
-    void SendData(CSideCoord      data, int destTask = 0);
+    void GetData(unsigned& result, int sourceTask, MPI_Status* pStatus = NULL);
+    void GetData(int&      result, int sourceTask, MPI_Status* pStatus = NULL);
+    void GetData(double&   result, int sourceTask, MPI_Status* pStatus = NULL);
+    void GetData(CMpiConnections& result, int sourceTask, MPI_Status* pStatus = NULL);
+    void GetData(CSquareField&    result, int sourceTask, MPI_Status* pStatus = NULL);
+    void GetData(CMatrix&         result, int sourceTask, MPI_Status* pStatus = NULL);
+    void GetData(CSideCoord&      result, int sourceTask, MPI_Status* pStatus = NULL);
+    void GetData(CPointCoord&     result, int sourceTask, MPI_Status* pStatus = NULL);
+    void GetData(std::string&     result, int sourceTask, MPI_Status* pStatus = NULL);    
+    void SendData(unsigned data, int destTask);
+    void SendData(int      data, int destTask);
+    void SendData(double   data, int destTask);
+    void SendData(CMpiConnections data, int destTask);
+    void SendData(CSquareField&   data, int destTask);
+    void SendData(CMatrix         data, int destTask);
+    void SendData(CSideCoord      data, int destTask);
+    void SendData(CPointCoord     data, int destTask);
+    void SendData(std::string     data, int destTask);
     void GetDataBcast(unsigned& result);
     void SendDataBcast(unsigned data);
     void ThrowBadCmd(ECommands expectedCmd, ECommands gotCmd);

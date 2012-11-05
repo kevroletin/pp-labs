@@ -15,6 +15,7 @@ public:
             SendData(*reader.Get(0, 0), i);
             SendData(CMpiConnections(1, 2, 3, 4), i);
             SendData(CSideCoord(10, ELeft), i);
+            SendData(std::string("Hello world!!!"), i);
         }
     }
 };
@@ -69,6 +70,11 @@ struct Worker: public CRankOwner, public MixMpiHelper, public MixTaskLogger {
             CSideCoord c;
             GetData(c);
             ok(c == CSideCoord(10, ELeft));
+        }
+        {
+            std::string str;
+            GetData(str);
+            ok(str == std::string("Hello world!!!"));
         }
     }
 };

@@ -55,7 +55,7 @@ ECommands MixMpiHelper::RecieveCmd(int sourceTask, MPI_Status* pStatus)
         pStatus = &StubStatus;
     }
     MPI_Recv(&cmd, 1, MPI_INT, sourceTask, MT_COMMANDS, MPI_COMM_WORLD, pStatus);
-    CommLogEx("RecieveCmd " << cmdToStr[cmd]);
+    CommLogEx("RecieveCmd " << cmdToStr[cmd] << " from " << pStatus->MPI_SOURCE);
     return static_cast<ECommands>(cmd);
 }
 
@@ -86,6 +86,7 @@ void MixMpiHelper::GetData(int& result, int sourceTask, MPI_Status* pStatus)
         pStatus = &StubStatus;
     }
     MPI_Recv(&result, 1, MPI_INT, sourceTask, MT_DATA_PARAMS, MPI_COMM_WORLD, pStatus);
+    CommLogEx("GetData " << result);
 }
 
 void MixMpiHelper::GetData(double& result, int sourceTask, MPI_Status* pStatus)
@@ -96,6 +97,7 @@ void MixMpiHelper::GetData(double& result, int sourceTask, MPI_Status* pStatus)
         pStatus = &StubStatus;
     }
     MPI_Recv(&result, 1, MPI_DOUBLE, sourceTask, MT_DATA_PARAMS, MPI_COMM_WORLD, pStatus);
+    CommLogEx("GetData " << result);
 }
 
 void MixMpiHelper::GetData(CSquareField& result, int sourceTask, MPI_Status* pStatus)
@@ -139,6 +141,25 @@ void MixMpiHelper::GetData(CSideCoord& result, int sourceTask, MPI_Status* pStat
     uint tmp = 0;
     GetData(tmp, sourceTask, pStatus);
     result.m_side = static_cast<ESide>(tmp);
+    CommLogEx("GetData " << result);
+}
+
+void MixMpiHelper::GetData(CPointCoord& result, int sourceTask, MPI_Status* pStatus)
+{
+    CommLogEx("GetData CPointCoord from " << sourceTask);    
+    GetData(result.m_x, sourceTask, pStatus);
+    GetData(result.m_y, sourceTask, pStatus);
+    CommLogEx("GetData " << result);
+}
+
+void MixMpiHelper::GetData(std::string& result, int sourceTask, MPI_Status* pStatus)
+{
+    CommLogEx("GetData std::string from " << sourceTask);
+    int size;
+    GetData(size, sourceTask, pStatus);
+    result.resize(size);
+    MPI_Recv(&result[0], size, MPI_CHAR, sourceTask, MT_DATA_STREAM, MPI_COMM_WORLD, pStatus);    
+    CommLogEx("GetData " << result);
 }
 
 void MixMpiHelper::SendData(unsigned data, int destTask)
@@ -191,6 +212,21 @@ void MixMpiHelper::SendData(CSideCoord data, int destTask)
     uint tmp = data.m_side;
     SendData(tmp, destTask);
 }
+
+void MixMpiHelper::SendData(CPointCoord data, int destTask)
+{
+    CommLogEx("SendData CSideCoord to " << destTask);
+    SendData(data.m_x, destTask);
+    SendData(data.m_y, destTask);
+}
+
+void MixMpiHelper::SendData(std::string data, int destTask)
+{
+    CommLogEx("SendData std::string to " << destTask);
+    SendData(data.size(), destTask);
+    MPI_Send(&data[0], data.size(), MPI_CHAR, destTask, MT_DATA_STREAM, MPI_COMM_WORLD);    
+}
+
 
 void MixMpiHelper::GetDataBcast(unsigned& result)
 {
@@ -256,9 +292,11 @@ void MixTaskLogger::SendLog()
 void MixTaskLogger::PutToLog(CLogedItem* loggedItem)
 {
 #ifdef STDERR_LOG_DUMP
-    std::stringstream ss;
-    PublishItem(ss, loggedItem);
-    std::cerr << ss.str();
+//    if (m_ownerRank == 0) {
+        std::stringstream ss;
+        PublishItem(ss, loggedItem);
+        std::cerr << ss.str();
+//    }
 #endif
     m_buffer.push_back(loggedItem);
 }
