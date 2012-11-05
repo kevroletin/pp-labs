@@ -37,7 +37,7 @@ struct CMpiCommunicator: public ICommunicator, public CRankSlave, public MixSlav
         return false;
     }
     virtual bool GetWay(uint value, CSideCoord coord, std::string& way) {
-        LogEx("Comm GetWay " << coord);
+        LogEx("Comm GetWay value " << value << " " << coord);
         int rank = m_fields[coord.m_side];
         if (0 == rank) return false;
 
@@ -174,11 +174,13 @@ protected:
     void Run() {
         bool ok = true;
         bool finFound = false;
+        bool gotField = false;
         {
             ECommands cmd = RecieveCmd(0);
             switch (cmd) {
             case CMD_SEND_INPUT_DATA: {
                 RecieveField();
+                gotField = true;
             } break;
             case CMD_DIE: {
                 ok = false;
@@ -244,6 +246,7 @@ protected:
                     SendCmd(CMD_SEND_WAY, 0);
                     SendData(way, 0);
                 }
+                { LogEx(m_field); }
             } break;
             case CMD_FIND_WAY: {
                 uint dist;
@@ -257,6 +260,7 @@ protected:
                     SendCmd(CMD_SEND_WAY, 0);
                     SendData(way, 0);
                 }
+                { LogEx(m_field); }
             } break;
             case CMD_DIE: {
                 ok = false;
@@ -279,7 +283,7 @@ protected:
             }
         }
 
-        
+        if (gotField) { LogEx(m_field); }
     }
     void RecieveField() {
         CMpiConnections conn;
@@ -310,8 +314,10 @@ int main(int argc, char* argv[])
     try {
         if (0 == env.m_rank) {
             CSupervisor s(env, argv[1]);
+            s.PublishLog();
         } else {
             CWorker w(env.m_rank);
+            w.PublishLog();
         }
     }
     catch (const char* str) {

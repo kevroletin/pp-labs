@@ -289,13 +289,14 @@ public:
         return true; */
     }
     virtual bool GetWay(uint value, CPointCoord coord, std::string& way) {
-        { LogEx("GetWay " << value << " | " << coord); }
         if (value == (uint)-1) value = GetData(coord) + 1;
+        { AlgoLogEx("GetWay " << value << " | " << coord); }
         
         if (!m_size.Inside(coord)) {
-            Log("Go outside");
+            AlgoLog("Go outside");
             return m_comm->GetWay(value, m_size.ToSideCoord(coord), way);
         }
+        AlgoLogEx("Cell dist value " << GetData(coord));
 
         if (Start == GetType(coord)) return true;
         if (value <= GetData(coord)) return false;
@@ -366,18 +367,21 @@ protected:
             if (Fin == GetType(x, y)) {
                 AlgoLogEx("Look at me\n" << GetData());
                 AlgoLogEx("GoDFS: Fin found x: " << x << " y: " << y);
-                GetData(x, y) = currDist;
-                AlgoLog("GoDFS: updated fin value");
+                if (currDist < GetData(x, y)) {
+                    AlgoLogEx("GoDFS: updated fin value " << GetData(x, y) << " - " << currDist);
+                    GetData(x, y) = currDist;
+                }
                 return true;
             }
             if (m_type.Get(x, y) != Full && currDist < m_data.Get(x, y)) {
                 AlgoLog("GoDFS: update");
                 m_data.Get(x, y) = currDist;
-                return
-                    GoDFS(currDist + 1, x - 1, y    ) ||
-                    GoDFS(currDist + 1, x + 1, y    ) ||
-                    GoDFS(currDist + 1, x,     y + 1) ||
-                    GoDFS(currDist + 1, x,     y - 1);
+                bool res = false;
+                res |= GoDFS(currDist + 1, x - 1, y    );
+                res |= GoDFS(currDist + 1, x + 1, y    );
+                res |= GoDFS(currDist + 1, x,     y + 1);
+                res |= GoDFS(currDist + 1, x,     y - 1);
+                return res;
             }
         } else {
             AlgoLogEx("Go outside " << CPointCoord(x, y));
@@ -406,10 +410,11 @@ public:
         m_squareSize = n / k;
         assert(0 == n % k);
         m_data.resize(m_gridSize*m_gridSize, NULL);
+        LogEx("CFieldReder: gridSize " << m_gridSize << " squareSize " << m_squareSize);
     }
     void InitGrid() {
         {
-            Log("CFieldReder: Create fields");
+            LogEx("CFieldReder: Create fields");
             for (uint y = 0; y < m_gridSize; ++y) {
                 for (uint x = 0; x < m_gridSize; ++x) {
                     std::stringstream ss;
