@@ -30,6 +30,7 @@ struct CMpiCommunicator: public ICommunicator, public CRankSlave, public MixSlav
         int rank = m_fields[coord.m_side];
         if (0 == rank) return false;
 
+        SendCmd(CMD_ENTER, 0);
         SendCmd(CMD_GO, rank);
         SendData(value, rank);
         SendData(coord.Flip(), rank);
@@ -51,7 +52,7 @@ struct CMpiCommunicator: public ICommunicator, public CRankSlave, public MixSlav
 
 class CSupervisor: public CRankOwner, public MixMpiHelper, public MixTaskLogger {
 public:
-    CSupervisor(std::string fname): CRankOwner(0), MixTaskLogger(0), m_reader(*this)
+    CSupervisor(CEnvironment& env, std::string fname): CRankOwner(0), MixTaskLogger(0), m_reader(*this), m_env(env)
     {
         Run(fname);
     }
@@ -63,23 +64,29 @@ protected:
             assert(0);
         }
         { LogEx("Read field\n" << m_reader); }
-        
+
+        int needTasks = m_reader.GetGridSize() * m_reader.GetGridSize() + 1;
+        if (m_env.m_procCnt < needTasks) {
+            std::stringstream ss;
+            ss << "not enough tasks: need " << needTasks << " got " << m_env.m_procCnt;
+            throw ss.str();
+        } else if (needTasks < m_env.m_procCnt) {
+            for (int i = needTasks; i < m_env.m_procCnt; ++i) {
+                SendCmd(CMD_DIE, i);
+            }
+        }
         SendTasks();
         SendGo();
-        WaitFinish(); // TODO:
-
-        MPI_Status r;
-        ECommands cmd = RecieveCmd(MPI_ANY_SOURCE, &r);
-        if (CMD_FIN_FOUND == cmd) {
-            NotifyFinFound(r.MPI_SOURCE);
+        if (WaitFinish()) {
+            NotifyAllTasks(CMD_FIN_FOUND);
             std::string way;
             GetWay(way);
             LogEx("Way found: " << way);
             std::cerr << "Way found: " << way << "\n";
-            KillTasks();
         } else {
-            assert(0); // TODO:
+            std::cerr << "Can not find way\n";
         }
+        NotifyAllTasks(CMD_DIE);
     }
     void SendTasks() {
         Log("SendTasks");
@@ -110,19 +117,27 @@ protected:
     }
     bool WaitFinish() {
         Log("WaitFinish");
-        // TODO
-        return true;
-    }
-    void NotifyFinFound(int dontSendTo) {
-        uint s = m_reader.GetGridSize();
-        for (uint y = 0; y < s; ++y) {
-            for (uint x = 0; x < s; ++x) {
-                int rank = CMpiConnections::GridCoordToRank(s, CPointCoord(x, y));
-                if (rank != dontSendTo) {
-                    SendCmd(CMD_FIN_FOUND, rank);
-                }
+        int delta = 1;
+        bool finFound = false;
+        ECommands cmd;
+        while (delta > 0) {
+            cmd = RecieveCmd(MPI_ANY_SOURCE);
+            switch (cmd) {
+            case CMD_ENTER: {
+                ++delta;
+            } break;
+            case CMD_FIN_FOUND: {
+                finFound = true;
+            }; // fall throw
+            case CMD_EXIT: {
+                --delta;
+            } break;
+            default: assert(0);
             }
+            { LogEx("Now delta is " << delta); }
         }
+        { LogEx("Work finished " << finFound); }
+        return finFound;
     }
     void GetWay(std::string& way) {
         Log("GetWay");
@@ -136,16 +151,17 @@ protected:
         RecieveAndCheckCmd(CMD_SEND_WAY, MPI_ANY_SOURCE, &r);
         GetData(way, r.MPI_SOURCE);
     }
-    void KillTasks() {
+    void NotifyAllTasks(ECommands cmd) {
         uint s = m_reader.GetGridSize();
         for (uint y = 0; y < s; ++y) {
             for (uint x = 0; x < s; ++x) {
                 int rank = CMpiConnections::GridCoordToRank(s, CPointCoord(x, y));                
-                SendCmd(CMD_DIE, rank);
+                SendCmd(cmd, rank);
             }
         }
     }
     CFieldReder m_reader;
+    CEnvironment& m_env;
 };
 
 class CWorker: public CRankOwner, public MixMpiHelper, public MixTaskLogger {
@@ -156,11 +172,21 @@ public:
     }
 protected:
     void Run() {
-        RecieveAndCheckCmd(CMD_SEND_INPUT_DATA);
-        RecieveField();
-
         bool ok = true;
         bool finFound = false;
+        {
+            ECommands cmd = RecieveCmd(0);
+            switch (cmd) {
+            case CMD_SEND_INPUT_DATA: {
+                RecieveField();
+            } break;
+            case CMD_DIE: {
+                ok = false;
+            } break;
+            default: assert(0);
+            }
+        }
+
         while (ok && !finFound) {
             MPI_Status r;
             switch(RecieveCmd(MPI_ANY_SOURCE, &r)) {
@@ -170,9 +196,11 @@ protected:
             case CMD_SEND_TASK: {
                 CPointCoord p;
                 GetData(p, 0);
-                finFound = finFound || m_field.Go(0, p);
-                if (finFound) {
+                bool res = m_field.Go(0, p);
+                if (res) {
                     SendCmd(CMD_FIN_FOUND);
+                } else {
+                    SendCmd(CMD_EXIT);
                 }
             } break;
             case CMD_GO: {
@@ -180,9 +208,11 @@ protected:
                 CSideCoord coord;
                 GetData(dist,  r.MPI_SOURCE);
                 GetData(coord, r.MPI_SOURCE);
-                finFound = finFound || m_field.Go(dist, m_field.GetSize().FromSideCoord(coord));
-                if (finFound) {
+                bool res = m_field.Go(dist, m_field.GetSize().FromSideCoord(coord));
+                if (res) {
                     SendCmd(CMD_FIN_FOUND);
+                } else {
+                    SendCmd(CMD_EXIT);
                 }
             } break;
             case CMD_FIN_FOUND: {
@@ -270,15 +300,26 @@ int main(int argc, char* argv[])
 {
     CEnvironment env;
     env.InitMPI(argc, argv);
+    if (argc != 2) {
+        if (0 == env.m_rank) {
+            std::cerr << "usage: " << argv[0] << " <filename>\n\n";
+        }
+        return 0;
+    }
+    
     try {
         if (0 == env.m_rank) {
-            CSupervisor s("unit_tests/t1/01_in.txt");
+            CSupervisor s(env, argv[1]);
         } else {
             CWorker w(env.m_rank);
         }
     }
+    catch (const char* str) {
+        std::cerr << str << "\n\n";
+        assert(0);
+    }
     catch (std::string str) {
-        std::cerr << str << "\n";
+        std::cerr << str << "\n\n";
         assert(0);
     }
     return 0;

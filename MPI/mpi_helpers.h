@@ -41,6 +41,8 @@ enum ECommands {
     CMD_FIND_WAY,
     CMD_SEND_WAY,
     CMD_NO_WAY,
+    CMD_ENTER,
+    CMD_EXIT
 };
 
 static std::string cmdToStr[] = {
@@ -55,7 +57,9 @@ static std::string cmdToStr[] = {
     "CMD_START_FIND_WAY",
     "CMD_FIND_WAY",
     "CMD_SEND_WAY",
-    "CMD_NO_WAY"
+    "CMD_NO_WAY",
+    "CMD_ENTER",
+    "CMD_EXIT",
 };
 
 struct CLogedItem {
