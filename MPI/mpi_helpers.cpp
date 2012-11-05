@@ -1,105 +1,192 @@
 #include "mpi_helpers.h"
+#include "labyrinth.h"
 #include "mpi.h"
 
 #include <cassert> // TODO: throw errors enstead
 #include <fstream>
 #include <sstream>
 
+#define CommLog(msg) Log(msg)
+#define CommLogEx(msg) LogEx(msg)
+
 void TEnvironment::InitMPI(int CmdLineArgc, char** CmdLineArgv)
 {
     MPI_Init(&CmdLineArgc, &CmdLineArgv);
-    MPI_Comm_size(MPI_COMM_WORLD, &ProcCnt);
-    MPI_Comm_rank(MPI_COMM_WORLD, &Rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &m_procCnt);
+    MPI_Comm_rank(MPI_COMM_WORLD, &m_rank);
 }
 
 /*
-TEdgePoint TSupervisor::ReceiveResults()
+TEdgePoint TSupervisor::Receiveresults()
 {
     SUPERVISOR_LOG("Recieve results");
-    TEdgePoint BestResult = { INF, INF, -1 };
+    TEdgePoint Bestresult = { INF, INF, -1 };
     for (unsigned i = 0; i < Graph.GetEdgesCnt(); ++i) {
         MPI_Status Status;
         RecieveAndCheckCmd(CMD_SEND_ANS_MAIN, MPI_ANY_SOURCE, &Status);
-        TEdgePoint NewResult;
-        GetData(NewResult.Radius, Status.MPI_SOURCE);
-        GetData(NewResult.Offset, Status.MPI_SOURCE);
-        GetData(NewResult.EdgeIndex, Status.MPI_SOURCE);
-        if (NewResult.Radius < BestResult.Radius) {
-            BestResult = NewResult;
+        TEdgePoint Newresult;
+        GetData(Newresult.Radius, Status.MPI_SOURCE);
+        GetData(Newresult.Offset, Status.MPI_SOURCE);
+        GetData(Newresult.EdgeIndex, Status.MPI_SOURCE);
+        if (Newresult.Radius < Bestresult.Radius) {
+            Bestresult = Newresult;
         }
     }
-    return BestResult;
+    return Bestresult;
 }
 */
-void  IMpiHelper::SendCmd(unsigned Cmd, int DestTask)
+void MixMpiHelper::SendCmd(unsigned cmd, int destTask)
 {
-    MPI_Send(&Cmd, 1, MPI_UNSIGNED, DestTask, MT_COMMANDS, MPI_COMM_WORLD);
+    CommLogEx("SendCmd " << cmdToStr[cmd] << " to " << destTask);
+    MPI_Send(&cmd, 1, MPI_UNSIGNED, destTask, MT_COMMANDS, MPI_COMM_WORLD);
 }
 
-ECommands  IMpiHelper::RecieveCmd(int SourceTask, MPI_Status* pStatus)
+ECommands MixMpiHelper::RecieveCmd(int sourceTask, MPI_Status* pStatus)
 {
-    unsigned Cmd;
+    CommLogEx("RecieveCmd from " << sourceTask);
+    unsigned cmd;
     MPI_Status StubStatus;
     if ( NULL == pStatus) {
         pStatus = &StubStatus;
     }
-    MPI_Recv(&Cmd, 1, MPI_INT, SourceTask, MT_COMMANDS, MPI_COMM_WORLD, pStatus);
-    return static_cast<ECommands>(Cmd);
+    MPI_Recv(&cmd, 1, MPI_INT, sourceTask, MT_COMMANDS, MPI_COMM_WORLD, pStatus);
+    CommLogEx("RecieveCmd " << cmdToStr[cmd]);
+    return static_cast<ECommands>(cmd);
 }
 
-void  IMpiHelper::RecieveAndCheckCmd(ECommands Cmd, int SourceTask, MPI_Status* pStatus)
+void MixMpiHelper::RecieveAndCheckCmd(ECommands Cmd, int sourceTask, MPI_Status* pStatus)
 {
-    ECommands GotCmd = RecieveCmd(SourceTask, pStatus);
+    ECommands GotCmd = RecieveCmd(sourceTask, pStatus);
     if (Cmd != GotCmd) {
         ThrowBadCmd(Cmd, GotCmd);
     }
 }
 
-void  IMpiHelper::GetData(unsigned& Result, int SourceTask, MPI_Status* pStatus)
+void MixMpiHelper::GetData(unsigned& result, int sourceTask, MPI_Status* pStatus)
 {
+    CommLogEx("GetData uint from " << sourceTask);
     MPI_Status StubStatus;
     if ( NULL == pStatus) {
         pStatus = &StubStatus;
     }
-    MPI_Recv(&Result, 1, MPI_UNSIGNED, SourceTask, MT_DATA_PARAMS, MPI_COMM_WORLD, pStatus);
+    MPI_Recv(&result, 1, MPI_UNSIGNED, sourceTask, MT_DATA_PARAMS, MPI_COMM_WORLD, pStatus);
+    CommLogEx("GetData " << result);
 }
 
-void  IMpiHelper::GetData(double& Result, int SourceTask, MPI_Status* pStatus)
+void MixMpiHelper::GetData(int& result, int sourceTask, MPI_Status* pStatus)
 {
+    CommLogEx("GetData int from " << sourceTask);    
     MPI_Status StubStatus;
     if ( NULL == pStatus) {
         pStatus = &StubStatus;
     }
-    MPI_Recv(&Result, 1, MPI_DOUBLE, SourceTask, MT_DATA_PARAMS, MPI_COMM_WORLD, pStatus);
+    MPI_Recv(&result, 1, MPI_INT, sourceTask, MT_DATA_PARAMS, MPI_COMM_WORLD, pStatus);
 }
 
-void  IMpiHelper::SendData(unsigned Data, int DestTask)
+void MixMpiHelper::GetData(double& result, int sourceTask, MPI_Status* pStatus)
 {
-    MPI_Send(&Data, 1, MPI_UNSIGNED, DestTask, MT_DATA_PARAMS, MPI_COMM_WORLD);
+    CommLogEx("GetData double from " << sourceTask);    
+    MPI_Status StubStatus;
+    if ( NULL == pStatus) {
+        pStatus = &StubStatus;
+    }
+    MPI_Recv(&result, 1, MPI_DOUBLE, sourceTask, MT_DATA_PARAMS, MPI_COMM_WORLD, pStatus);
 }
 
-void  IMpiHelper::SendData(double Data, int DestTask)
+void MixMpiHelper::GetData(CSquareField& result, int sourceTask, MPI_Status* pStatus)
 {
-    MPI_Send(&Data, 1, MPI_DOUBLE, DestTask, MT_DATA_PARAMS, MPI_COMM_WORLD);
+    CommLogEx("GetData CSquareField from " << sourceTask);
+    GetData(result.GetType());
+    GetData(result.GetData());
+    assert(result.GetType().m_dim == result.GetData().m_dim);
+    result.Resize(result.GetType().m_dim);
 }
 
-void  IMpiHelper::GetDataBcast(unsigned& Result)
+void MixMpiHelper::GetData(CMatrix& matr, int sourceTask, MPI_Status* pStatus)
+{
+    CommLogEx("GetData CMatrix from " << sourceTask);
+    MPI_Status StubStatus;
+    if ( NULL == pStatus) {
+        pStatus = &StubStatus;
+    }
+
+    GetData(matr.m_dim.m_x);
+    GetData(matr.m_dim.m_y);
+    { CommLogEx("GetData CMatrix got size " << matr.m_dim.m_x*matr.m_dim.m_y); }
+    matr.Resize();
+    MPI_Recv(&matr.m_data[0], matr.m_dim.m_x*matr.m_dim.m_y, MPI_UNSIGNED, sourceTask, MT_DATA_STREAM, MPI_COMM_WORLD, pStatus);
+    { CommLog("GetData CMatrix got array"); }
+}
+
+void MixMpiHelper::GetData(CMpiConnections& result, int sourceTask, MPI_Status* pStatus)
+{
+    CommLogEx("GetData CMpiConnections from " << sourceTask);    
+    GetData(result.m_topRank,    sourceTask);
+    GetData(result.m_rightRank,  sourceTask);
+    GetData(result.m_bottomRank, sourceTask);
+    GetData(result.m_leftRank,   sourceTask);
+}
+
+void MixMpiHelper::SendData(unsigned data, int destTask)
+{
+    CommLogEx("SendData uint " << data << " to " << destTask);
+    MPI_Send(&data, 1, MPI_UNSIGNED, destTask, MT_DATA_PARAMS, MPI_COMM_WORLD);
+}
+
+void MixMpiHelper::SendData(int data, int destTask)
+{
+    CommLogEx("SendData int " << data << " to " << destTask);
+    MPI_Send(&data, 1, MPI_INT, destTask, MT_DATA_PARAMS, MPI_COMM_WORLD);
+}
+
+void MixMpiHelper::SendData(double data, int destTask)
+{
+    CommLogEx("SendData double " << data << " to " << destTask);
+    MPI_Send(&data, 1, MPI_DOUBLE, destTask, MT_DATA_PARAMS, MPI_COMM_WORLD);
+}
+
+void MixMpiHelper::SendData(CMpiConnections data, int destTask)
+{
+    CommLogEx("SendData connections to " << destTask);
+    SendData(data.m_topRank, destTask);
+    SendData(data.m_rightRank, destTask);
+    SendData(data.m_bottomRank, destTask);
+    SendData(data.m_leftRank, destTask);
+}
+
+void MixMpiHelper::SendData(CSquareField& field, int destTask)
+{
+    CommLogEx("SendData CSquareField to " << destTask );
+    SendData(field.GetType(), destTask);
+    SendData(field.GetData(), destTask);    
+}
+
+void MixMpiHelper::SendData(CMatrix matr, int destTask)
+{
+    CommLogEx("SendData CMatrix to " << destTask);
+    SendData(matr.m_dim.m_x, destTask);
+    SendData(matr.m_dim.m_y, destTask);
+    CommLogEx("SendData CMatrix array " << matr.m_dim.m_x*matr.m_dim.m_y);
+    MPI_Send(&matr.m_data[0], matr.m_dim.m_x*matr.m_dim.m_y, MPI_UNSIGNED, destTask, MT_DATA_STREAM, MPI_COMM_WORLD);
+}
+
+void MixMpiHelper::GetDataBcast(unsigned& result)
 {
     assert( false == IsSupervisor() );
-    MPI_Bcast(&Result, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&result, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
 }
 
-void  IMpiHelper::SendDataBcast(unsigned Data)
+void MixMpiHelper::SendDataBcast(unsigned Data)
 {
     assert( IsSupervisor() );
     MPI_Bcast(&Data, 1, MPI_UNSIGNED, 0, MPI_COMM_WORLD);
 }
 
-void  IMpiHelper::ThrowBadCmd(ECommands ExpectedCmd, ECommands GotCmd)
+void MixMpiHelper::ThrowBadCmd(ECommands ExpectedCmd, ECommands GotCmd)
 {
     std::stringstream ss;
-    ss << "Received wrond cmd. Wait " << CmdToStr[ExpectedCmd] <<
-          ". Got" << CmdToStr[GotCmd];
+    ss << "Received wrond cmd. Wait " << cmdToStr[ExpectedCmd] <<
+          ". Got" << cmdToStr[GotCmd];
     throw ss.str().c_str();
 }
 
@@ -147,7 +234,9 @@ void MixTaskLogger::SendLog()
 void MixTaskLogger::PutToLog(CLogedItem* loggedItem)
 {
 #ifdef STDERR_LOG_DUMP
-    PublishItem(std::cerr, loggedItem);
+    std::stringstream ss;
+    PublishItem(ss, loggedItem);
+    std::cerr << ss.str();
 #endif
     m_buffer.push_back(loggedItem);
 }
@@ -165,3 +254,25 @@ CLogHelper::~CLogHelper()
 {
     m_logedItem->finishTimeMs = clock()*1000 / CLOCKS_PER_SEC;
 }
+
+// ****
+
+int moveDx[] = { 0, 1, 0, -1 };
+int moveDy[] = { -1, 0, 1, 0 };
+std::string sideStr[] = { "ETop", "ERight", "EBottom", "ELeft" };
+
+ESide Invert( ESide side ) { 
+    return static_cast<ESide>( (side + 2) % 4 );
+}
+
+std::ostream& operator<<(std::ostream& out, CPointCoord point) {
+    out << "x: " << point.m_x << ", y:" << point.m_y;
+    return out;
+}
+
+std::ostream& operator<<(std::ostream& out, CSideCoord coord) {
+    out << "side: " << sideStr[coord.m_side] << ", offset:" << coord.m_offset;
+    return out;
+}
+
+

@@ -15,9 +15,10 @@ typedef unsigned uint;
 typedef unsigned char uchar;
 
 struct TEnvironment {
-    int ProcCnt;
-    int Rank;
-    void InitMPI(int CmdLineArgc, char** CmdLineArgv);
+    int m_procCnt;
+    int m_rank;
+    void InitMPI(int cmdLineArgc, char** cmdLineArgv);
+    ~TEnvironment() { MPI_Finalize(); }
 };
 
 enum EMessageTags {
@@ -34,19 +35,13 @@ enum ECommands {
     CMD_SEND_INPUT_DATA,
 };
 
-static std::string CmdToStr[] = {
+static std::string cmdToStr[] = {
     "CMD_NONE",
     "CMD_DIE",
     "CMD_SEND_TASK",
     "CMD_SEND_ANS",
     "CMD_SEND_INPUT_DATA",
 };
-
-struct ITask {
-    virtual int GetRank() = 0;
-    bool IsSupervisor() { return GetRank() == 0; }
-};
-
 
 struct CLogedItem {
     unsigned long long startTimeMs;
@@ -60,7 +55,7 @@ struct ILogger {
     virtual void PutToLog(CLogedItem* loggedItem) = 0;
 };
 
-class MixTaskLogger: public ILogger {
+class MixTaskLogger: virtual public ILogger {
 public:
     MixTaskLogger(int ownerRank, std::string name = "");
     void PublishLog();
@@ -74,7 +69,7 @@ protected:
     void PublishItem(std::ostream& out, CLogedItem* li);    
 };
 
-class MixSlaveLogger: public ILogger {
+class MixSlaveLogger: virtual public ILogger {
 public:
     MixSlaveLogger(ILogger& masterLog): m_masterLog(masterLog) {}
     virtual void PutToLog(CLogedItem* loggedItem) { m_masterLog.PutToLog(loggedItem); }
@@ -88,21 +83,46 @@ public:
     ~CLogHelper();
 
 protected:
-//    ILogger& m_log;
     CLogedItem* m_logedItem;
 };
 
-struct IMpiHelper: public ITask {
-    void SendCmd(unsigned Cmd, int DestTask = 0);
-    ECommands RecieveCmd(int SourceTask = 0, MPI_Status* pStatus = NULL);
-    void RecieveAndCheckCmd(ECommands Cmd, int SourceTask = 0, MPI_Status* pStatus = NULL);
-    void GetData(unsigned& Result, int SourceTask = 0, MPI_Status* pStatus = NULL);
-    void GetData(double&   Result, int SourceTask = 0, MPI_Status* pStatus = NULL);
-    void SendData(unsigned Data, int DestTask = 0);
-    void SendData(double   Data, int DestTask = 0);
-    void GetDataBcast(unsigned& Result);
-    void SendDataBcast(unsigned Data);
-    void ThrowBadCmd(ECommands ExpectedCmd, ECommands GotCmd);
+struct IHaveRank {
+    virtual int GetRank() = 0;
+    bool IsSupervisor() { return GetRank() == 0; }
+};
+
+class CRankOwner: virtual public IHaveRank {
+public:
+    CRankOwner(int rank): m_rank(rank) {}
+    virtual int GetRank() { return m_rank; }
+//    bool IsSupervisor() { return GetRank() == 0; }
+protected:
+    int m_rank;
+};
+
+class CMpiConnections;
+class CSquareField;
+class CMatrix;
+
+struct MixMpiHelper: virtual public IHaveRank, virtual public ILogger {
+    void SendCmd(unsigned cmd, int destTask = 0);
+    ECommands RecieveCmd(int sourceTask = 0, MPI_Status* pStatus = NULL);
+    void RecieveAndCheckCmd(ECommands cmd, int sourceTask = 0, MPI_Status* pStatus = NULL);
+    void GetData(unsigned& result, int sourceTask = 0, MPI_Status* pStatus = NULL);
+    void GetData(int&      result, int sourceTask = 0, MPI_Status* pStatus = NULL);
+    void GetData(double&   result, int sourceTask = 0, MPI_Status* pStatus = NULL);
+    void GetData(CMpiConnections& result, int sourceTask = 0, MPI_Status* pStatus = NULL);
+    void GetData(CSquareField&    result, int sourceTask = 0, MPI_Status* pStatus = NULL);
+    void GetData(CMatrix&         result, int sourceTask = 0, MPI_Status* pStatus = NULL);
+    void SendData(unsigned data, int destTask = 0);
+    void SendData(int      data, int destTask = 0);
+    void SendData(double   data, int destTask = 0);
+    void SendData(CMpiConnections data, int destTask = 0);
+    void SendData(CSquareField&   data, int destTask = 0);
+    void SendData(CMatrix         data, int destTask = 0);
+    void GetDataBcast(unsigned& result);
+    void SendDataBcast(unsigned data);
+    void ThrowBadCmd(ECommands expectedCmd, ECommands gotCmd);
 };
 
 #endif // WORKERS_MPI_H

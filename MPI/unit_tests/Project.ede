@@ -10,6 +10,12 @@
     :source '("t1.cpp" "../mpi_helpers.cpp")
     :auxsource '("../mpi_helpers.h" "../labyrinth.h")
     )
+   (ede-proj-target-makefile-program "t2.out"
+    :name "t2.out"
+    :path ""
+    :source '("t2.cpp" "../mpi_helpers.cpp")
+    :auxsource '("../mpi_helpers.h" "../labyrinth.h")
+    )
    )
   :variables '(("CFLAGS" . "-ggdb -Wall $(shell mpic++ --showme:compile)") ("LDFLAGS" . "-ggdb -Wall $(shell mpic++ --showme:link)"))
   :configuration-variables 'nil

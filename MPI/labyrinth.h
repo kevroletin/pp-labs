@@ -7,7 +7,9 @@
 #include <vector>
 #include <queue>
 #include <cassert>
+#include <fstream>
 
+typedef unsigned uint;
 
 #define Log(str) CLogHelper L(*this, str);
 #define LogEx(data)                              \
@@ -19,13 +21,11 @@
 
 
 enum ESide { ETop, ERight, EBottom, ELeft };
-int moveDx[] = { 0, 1, 0, -1 };
-int moveDy[] = { -1, 0, 1, 0 };
-std::string sideStr[] = { "ETop", "ERight", "EBottom", "ELeft" };
+extern int moveDx[];
+extern int moveDy[];
+extern std::string sideStr[];
 
-ESide Invert( ESide side ) { 
-    return static_cast<ESide>( (side + 2) % 4 );
-}
+ESide Invert( ESide side );
 
 struct CPointCoord {
     CPointCoord() {}
@@ -36,10 +36,7 @@ struct CPointCoord {
     }
 };
 
-std::ostream& operator<<(std::ostream& out, CPointCoord point) {
-    out << "x: " << point.m_x << ", y:" << point.m_y;
-    return out;
-}
+std::ostream& operator<<(std::ostream& out, CPointCoord point);
 
 struct CSideCoord { 
     CSideCoord(uint offset, ESide side): m_offset(offset), m_side(side) {}
@@ -50,10 +47,7 @@ struct CSideCoord {
     }
 };
 
-std::ostream& operator<<(std::ostream& out, CSideCoord coord) {
-    out << "side: " << sideStr[coord.m_side] << ", offset:" << coord.m_offset;
-    return out;
-}
+std::ostream& operator<<(std::ostream& out, CSideCoord coord);
 
 struct CSize { 
     CSize() {}
@@ -104,26 +98,28 @@ struct CSize {
         default: assert(0);
         }
     }
+    bool operator==(const CSize& s) { return m_x == s.m_x && m_y == s.m_y; }
 };
 
-std::ostream& operator<<(std::ostream& out, CSize s) {
-    out << "x: " << s.m_x << " y:" << s.m_y;
-    return out;
-}
-
+std::ostream& operator<<(std::ostream& out, CSideCoord coord);
 
 const uint Empty = 0;
 const uint Full  = 1;
 const uint Start = 2;
 const uint Fin   = 3;
 
-class CMatrix {
-public:
+struct CMatrix {
     uint& Get(uint x, uint y) {
+        return m_data[y*m_dim.m_x + x];
+    }
+    uint Get(uint x, uint y) const {
         return m_data[y*m_dim.m_x + x];
     }
     void Resize(CSize dim, uint value = 0) {
         m_dim = dim;
+        m_data.resize(m_dim.m_x * m_dim.m_y, value);
+    }
+    void Resize(uint value = 0) {
         m_data.resize(m_dim.m_x * m_dim.m_y, value);
     }
     bool Inside(int x, int y) { return m_dim.Inside(x, y); }
@@ -140,7 +136,15 @@ public:
             out << "\n";
         }
     }
-protected:
+    bool operator==(const CMatrix& m) {
+        if (!(m_dim == m.m_dim)) return false;
+        for (uint y = 0; y < m_dim.m_y; ++y) {
+            for (uint x = 0; x < m_dim.m_x; ++x) {
+                if (Get(x, y) != m.Get(x, y)) return false;
+            }
+        }
+        return true;
+    }
     CSize m_dim;
     std::vector<uint> m_data;
 };
@@ -154,7 +158,6 @@ struct IField {
     virtual bool Go(uint value, CPointCoord coord) = 0;
     virtual bool GetWay(uint value, CPointCoord coord, std::string& way) = 0;
     virtual CSize GetSize() = 0;
-    
 };
 
 struct CSimpleCommunicator: public ICommunicator, public MixSlaveLogger {
@@ -206,8 +209,9 @@ class CSquareField: public IField, public MixSlaveLogger {
 public:
     CSquareField(ICommunicator* comm, ILogger& masterLog): MixSlaveLogger(masterLog), m_comm(comm) {}
     void SetCommunicator(ICommunicator* comm) { m_comm = comm; }
-    void Resize(uint x, uint y) { Resize(CSize(x, y)); }
+    void Resize(uint len) { Resize(CSize(len, len)); }
     void Resize(CSize size) {
+        assert(size.m_x == size.m_y);
         m_size = size;
         m_type.Resize(size, 0);
         m_data.Resize(size, -1);
@@ -222,8 +226,10 @@ public:
         ss << GetData(x, y);
         return ss.str();
     }
+    CMatrix& GetType() { return m_type; }
     uint& GetType(uint x, uint y) { return m_type.Get(x, y); }
     uint& GetType(CPointCoord p) { return m_type.Get(p.m_x, p.m_y); }
+    CMatrix& GetData() { return m_data; }
     uint& GetData(uint x, uint y) { return m_data.Get(x, y); }
     uint& GetData(CPointCoord p) { return m_data.Get(p.m_x, p.m_y); }
     
@@ -278,6 +284,11 @@ public:
         return false;
     }
     virtual CSize GetSize() { return m_size; }
+    bool operator ==(const CSquareField& f) {
+        return m_size == f.m_size && 
+               m_type == f.m_type &&
+               m_data == f.m_data;
+    }
 protected:
     ICommunicator* m_comm;
     CSize m_size;
@@ -362,7 +373,7 @@ public:
                     std::stringstream ss;
                     ss << "field [" << y << "][" << x << "]";
                     Get(x, y) = new CSquareField(NULL, *this);
-                    Get(x, y)->Resize(m_squareSize, m_squareSize);
+                    Get(x, y)->Resize(m_squareSize);
                 }
             }
         }
@@ -381,6 +392,13 @@ public:
                 }
             }
         }
+    }
+    bool Read(std::string fname) {
+        std::ifstream in;
+        in.open(fname.c_str());
+        bool res = Read(in);
+        in.close();
+        return res;
     }
     bool Read(std::istream& in) {
         Log("CFieldReder: Read");
@@ -452,6 +470,7 @@ public:
     }
     CSquareField*& Get(uint x, uint y) { return m_data[y*m_gridSize + x]; }    
     CSquareField*& Get(CPointCoord p) { return Get(p.m_x, p.m_y); }
+    uint GetGridSize() { return m_gridSize; }
     uint GetTotalSize() { return m_squareSize*m_gridSize; }
     bool FindWay(std::string& way) {
         CPointCoord s  = m_startSquareCoord;
@@ -472,6 +491,31 @@ protected:
     uint m_gridSize;
     uint m_squareSize;
     
+};
+
+struct CMpiConnections {
+    CMpiConnections() {}
+    CMpiConnections(uint gridSize, CPointCoord top, CPointCoord right, CPointCoord bottom, CPointCoord left) {
+        m_topRank = GridCoordToRank(gridSize, top);
+        m_rightRank = GridCoordToRank(gridSize, right);
+        m_bottomRank = GridCoordToRank(gridSize, bottom);
+        m_leftRank = GridCoordToRank(gridSize, left);
+    }
+    CMpiConnections(int topRank, int rightRank, int bottomRank, int leftRank) {
+        m_topRank = topRank;
+        m_rightRank = rightRank;
+        m_bottomRank = bottomRank;
+        m_leftRank = leftRank;
+    }    
+    int GridCoordToRank(uint gridSize, CPointCoord p) {
+        return CSize(gridSize, gridSize).Inside(p) ?
+            1 + gridSize * p.m_y + p.m_x : 
+            0;
+    }
+    int m_topRank;
+    int m_rightRank;
+    int m_bottomRank;
+    int m_leftRank;
 };
 
 #endif
