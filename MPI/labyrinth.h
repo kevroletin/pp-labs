@@ -260,12 +260,12 @@ public:
         }
     }
     virtual bool Go(uint value, CPointCoord coord) { 
-//        GoDFS(value, coord.m_x, coord.m_y);
-        LogEx("Go " << coord);
+        return GoDFS(value, coord.m_x, coord.m_y);
+/* Hard to implement bfs on multithread grid => use dfs everywhere */
+/*      LogEx("Go " << coord);
         if (!PushBFSQueue(value, coord.m_x, coord.m_y)) return false;
-
         GoBFS(-1);
-        return true;
+        return true; */
     }
     virtual bool GetWay(uint value, CPointCoord coord, std::string& way) {
         LogEx("GetWay " << value << " | " << coord);
@@ -273,25 +273,25 @@ public:
 
         if (!m_size.Inside(coord)) {
             Log("Go outside");
-            if (m_comm->GetWay(value, m_size.ToSideCoord(coord), way)) return true;
-        } else {
-            if (Start == GetType(coord)) return true;
-            if (value <= GetData(coord)) return false;
-            assert(value == GetData(coord) + 1);
-
-            way.push_back('N');
-            if (GetWay(value - 1, coord.Move(ETop), way)) return true;
-            way.resize(way.size() - 1);
-            way.push_back('W');
-            if (GetWay(value - 1, coord.Move(ERight), way)) return true;
-            way.resize(way.size() - 1);
-            way.push_back('S');
-            if (GetWay(value - 1, coord.Move(EBottom), way)) return true;
-            way.resize(way.size() - 1);
-            way.push_back('E');
-            if (GetWay(value - 1, coord.Move(ELeft), way)) return true;
-            way.resize(way.size() - 1);
+            return m_comm->GetWay(value, m_size.ToSideCoord(coord), way);
         }
+
+        if (Start == GetType(coord)) return true;
+        if (value <= GetData(coord)) return false;
+        assert(value == GetData(coord) + 1);
+        
+        way.push_back('N');
+        if (GetWay(value - 1, coord.Move(ETop), way)) return true;
+        way.resize(way.size() - 1);
+        way.push_back('W');
+        if (GetWay(value - 1, coord.Move(ERight), way)) return true;
+        way.resize(way.size() - 1);
+        way.push_back('S');
+        if (GetWay(value - 1, coord.Move(EBottom), way)) return true;
+        way.resize(way.size() - 1);
+        way.push_back('E');
+        if (GetWay(value - 1, coord.Move(ELeft), way)) return true;
+        way.resize(way.size() - 1);
         return false;
     }
     virtual CSize GetSize() { return m_size; }
