@@ -10,15 +10,16 @@
 #include <cstring>
 
 //#define STDERR_LOG_DUMP
+//#define DEBUG_COMMUNICATION
 
 typedef unsigned uint;
 typedef unsigned char uchar;
 
-struct TEnvironment {
+struct CEnvironment {
     int m_procCnt;
     int m_rank;
     void InitMPI(int cmdLineArgc, char** cmdLineArgv);
-    ~TEnvironment() { MPI_Finalize(); }
+    ~CEnvironment() { MPI_Finalize(); }
 };
 
 enum EMessageTags {
@@ -33,6 +34,10 @@ enum ECommands {
     CMD_SEND_TASK,
     CMD_SEND_ANS,
     CMD_SEND_INPUT_DATA,
+    CMD_GO,
+    CMD_FIND_WAY,
+    CMD_NO_WAY,
+    CMD_SEND_WAY
 };
 
 static std::string cmdToStr[] = {
@@ -95,14 +100,22 @@ class CRankOwner: virtual public IHaveRank {
 public:
     CRankOwner(int rank): m_rank(rank) {}
     virtual int GetRank() { return m_rank; }
-//    bool IsSupervisor() { return GetRank() == 0; }
 protected:
     int m_rank;
+};
+
+class CRankSlave: virtual public IHaveRank {
+public:
+    CRankSlave(IHaveRank& owner): m_owner(owner) {}
+    virtual int GetRank() { return m_owner.GetRank(); }
+protected:
+    IHaveRank& m_owner;
 };
 
 class CMpiConnections;
 class CSquareField;
 class CMatrix;
+class CSideCoord;
 
 struct MixMpiHelper: virtual public IHaveRank, virtual public ILogger {
     void SendCmd(unsigned cmd, int destTask = 0);
@@ -114,12 +127,14 @@ struct MixMpiHelper: virtual public IHaveRank, virtual public ILogger {
     void GetData(CMpiConnections& result, int sourceTask = 0, MPI_Status* pStatus = NULL);
     void GetData(CSquareField&    result, int sourceTask = 0, MPI_Status* pStatus = NULL);
     void GetData(CMatrix&         result, int sourceTask = 0, MPI_Status* pStatus = NULL);
+    void GetData(CSideCoord&      result, int sourceTask = 0, MPI_Status* pStatus = NULL);
     void SendData(unsigned data, int destTask = 0);
     void SendData(int      data, int destTask = 0);
     void SendData(double   data, int destTask = 0);
     void SendData(CMpiConnections data, int destTask = 0);
     void SendData(CSquareField&   data, int destTask = 0);
     void SendData(CMatrix         data, int destTask = 0);
+    void SendData(CSideCoord      data, int destTask = 0);
     void GetDataBcast(unsigned& result);
     void SendDataBcast(unsigned data);
     void ThrowBadCmd(ECommands expectedCmd, ECommands gotCmd);

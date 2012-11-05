@@ -39,11 +39,15 @@ struct CPointCoord {
 std::ostream& operator<<(std::ostream& out, CPointCoord point);
 
 struct CSideCoord { 
+    CSideCoord() {}
     CSideCoord(uint offset, ESide side): m_offset(offset), m_side(side) {}
     uint m_offset;
     ESide m_side; 
     CSideCoord Flip() {
         return CSideCoord( m_offset, Invert(m_side) );
+    }
+    bool operator==(const CSideCoord& c) const {
+        return m_offset == c.m_offset && m_side == c.m_side;
     }
 };
 
@@ -123,7 +127,7 @@ struct CMatrix {
         m_data.resize(m_dim.m_x * m_dim.m_y, value);
     }
     bool Inside(int x, int y) { return m_dim.Inside(x, y); }
-    void Dump(std::ostream& out) {
+    void Dump(std::ostream& out) const {
         for (uint i = 0; i < m_dim.m_y; ++i) {
             for (uint j = 0; j < m_dim.m_x; ++j) {
                 uint v = Get(j, i);
@@ -148,6 +152,11 @@ struct CMatrix {
     CSize m_dim;
     std::vector<uint> m_data;
 };
+
+inline std::ostream& operator<<(std::ostream& out, const CMatrix& matr) {
+    matr.Dump(out);
+    return out;
+}
 
 struct ICommunicator {
     virtual bool Go(uint value, CSideCoord coord) = 0;
@@ -216,7 +225,7 @@ public:
         m_type.Resize(size, 0);
         m_data.Resize(size, -1);
     }
-    std::string GetSymbol(uint x, uint y) { 
+    std::string GetSymbol(uint x, uint y) const { 
         uint t = GetType(x, y);
         if (Full  == t) return "#";
         if (Start == t) return "S";
@@ -228,12 +237,14 @@ public:
     }
     CMatrix& GetType() { return m_type; }
     uint& GetType(uint x, uint y) { return m_type.Get(x, y); }
+    uint  GetType(uint x, uint y) const { return m_type.Get(x, y); }
     uint& GetType(CPointCoord p) { return m_type.Get(p.m_x, p.m_y); }
     CMatrix& GetData() { return m_data; }
     uint& GetData(uint x, uint y) { return m_data.Get(x, y); }
+    uint  GetData(uint x, uint y) const { return m_data.Get(x, y); }
     uint& GetData(CPointCoord p) { return m_data.Get(p.m_x, p.m_y); }
     
-    void Dump(std::ostream& out, bool pretty = true) {
+    void Dump(std::ostream& out, bool pretty = true) const {
         if (pretty) {
             for (uint y = 0; y < m_size.m_y; ++y) {
                 for (uint x = 0; x < m_size.m_x; ++x) {
@@ -350,6 +361,11 @@ protected:
         return false;
     }
 };
+
+inline std::ostream& operator<<(std::ostream& out, const CSquareField field) {
+    field.Dump(out);
+    return out;
+}
 
 class CFieldReder: public MixSlaveLogger {
 public:

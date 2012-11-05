@@ -14,6 +14,7 @@ public:
             SendData(1.1, i);
             SendData(*reader.Get(0, 0), i);
             SendData(CMpiConnections(1, 2, 3, 4), i);
+            SendData(CSideCoord(10, ELeft), i);
         }
     }
 };
@@ -64,12 +65,17 @@ struct Worker: public CRankOwner, public MixMpiHelper, public MixTaskLogger {
             ok(c.m_topRank == 1 && c.m_rightRank == 2 &&
                c.m_bottomRank == 3 && c.m_leftRank == 4);
         }
+        {
+            CSideCoord c;
+            GetData(c);
+            ok(c == CSideCoord(10, ELeft));
+        }
     }
 };
     
 int main(int argc, char* argv[])
 {
-    TEnvironment env;
+    CEnvironment env;
     env.InitMPI(argc, argv);
     
     if (0 == env.m_rank) {

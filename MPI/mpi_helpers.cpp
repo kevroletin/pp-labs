@@ -6,10 +6,15 @@
 #include <fstream>
 #include <sstream>
 
-#define CommLog(msg) Log(msg)
-#define CommLogEx(msg) LogEx(msg)
+#ifdef DEBUG_COMMUNICATION
+#    define CommLog(msg) Log(msg)
+#    define CommLogEx(msg) LogEx(msg)
+#else
+#    define CommLog(msg)
+#    define CommLogEx(msg)
+#endif
 
-void TEnvironment::InitMPI(int CmdLineArgc, char** CmdLineArgv)
+void CEnvironment::InitMPI(int CmdLineArgc, char** CmdLineArgv)
 {
     MPI_Init(&CmdLineArgc, &CmdLineArgv);
     MPI_Comm_size(MPI_COMM_WORLD, &m_procCnt);
@@ -96,8 +101,8 @@ void MixMpiHelper::GetData(double& result, int sourceTask, MPI_Status* pStatus)
 void MixMpiHelper::GetData(CSquareField& result, int sourceTask, MPI_Status* pStatus)
 {
     CommLogEx("GetData CSquareField from " << sourceTask);
-    GetData(result.GetType());
-    GetData(result.GetData());
+    GetData(result.GetType(), sourceTask, pStatus);
+    GetData(result.GetData(), sourceTask, pStatus);
     assert(result.GetType().m_dim == result.GetData().m_dim);
     result.Resize(result.GetType().m_dim);
 }
@@ -110,8 +115,8 @@ void MixMpiHelper::GetData(CMatrix& matr, int sourceTask, MPI_Status* pStatus)
         pStatus = &StubStatus;
     }
 
-    GetData(matr.m_dim.m_x);
-    GetData(matr.m_dim.m_y);
+    GetData(matr.m_dim.m_x, sourceTask, pStatus);
+    GetData(matr.m_dim.m_y, sourceTask, pStatus);
     { CommLogEx("GetData CMatrix got size " << matr.m_dim.m_x*matr.m_dim.m_y); }
     matr.Resize();
     MPI_Recv(&matr.m_data[0], matr.m_dim.m_x*matr.m_dim.m_y, MPI_UNSIGNED, sourceTask, MT_DATA_STREAM, MPI_COMM_WORLD, pStatus);
@@ -121,10 +126,19 @@ void MixMpiHelper::GetData(CMatrix& matr, int sourceTask, MPI_Status* pStatus)
 void MixMpiHelper::GetData(CMpiConnections& result, int sourceTask, MPI_Status* pStatus)
 {
     CommLogEx("GetData CMpiConnections from " << sourceTask);    
-    GetData(result.m_topRank,    sourceTask);
-    GetData(result.m_rightRank,  sourceTask);
-    GetData(result.m_bottomRank, sourceTask);
-    GetData(result.m_leftRank,   sourceTask);
+    GetData(result.m_topRank,    sourceTask, pStatus);
+    GetData(result.m_rightRank,  sourceTask, pStatus);
+    GetData(result.m_bottomRank, sourceTask, pStatus);
+    GetData(result.m_leftRank,   sourceTask, pStatus);
+}
+
+void MixMpiHelper::GetData(CSideCoord& result, int sourceTask, MPI_Status* pStatus)
+{
+    CommLogEx("GetData CSideCoord from " << sourceTask);    
+    GetData(result.m_offset, sourceTask, pStatus);
+    uint tmp = 0;
+    GetData(tmp, sourceTask, pStatus);
+    result.m_side = static_cast<ESide>(tmp);
 }
 
 void MixMpiHelper::SendData(unsigned data, int destTask)
@@ -168,6 +182,14 @@ void MixMpiHelper::SendData(CMatrix matr, int destTask)
     SendData(matr.m_dim.m_y, destTask);
     CommLogEx("SendData CMatrix array " << matr.m_dim.m_x*matr.m_dim.m_y);
     MPI_Send(&matr.m_data[0], matr.m_dim.m_x*matr.m_dim.m_y, MPI_UNSIGNED, destTask, MT_DATA_STREAM, MPI_COMM_WORLD);
+}
+
+void MixMpiHelper::SendData(CSideCoord data, int destTask)
+{
+    CommLogEx("SendData CSideCoord to " << destTask);
+    SendData(data.m_offset, destTask);
+    uint tmp = data.m_side;
+    SendData(tmp, destTask);
 }
 
 void MixMpiHelper::GetDataBcast(unsigned& result)
