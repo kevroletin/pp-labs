@@ -21,25 +21,6 @@ void CEnvironment::InitMPI(int CmdLineArgc, char** CmdLineArgv)
     MPI_Comm_rank(MPI_COMM_WORLD, &m_rank);
 }
 
-/*
-TEdgePoint TSupervisor::Receiveresults()
-{
-    SUPERVISOR_LOG("Recieve results");
-    TEdgePoint Bestresult = { INF, INF, -1 };
-    for (unsigned i = 0; i < Graph.GetEdgesCnt(); ++i) {
-        MPI_Status Status;
-        RecieveAndCheckCmd(CMD_SEND_ANS_MAIN, MPI_ANY_SOURCE, &Status);
-        TEdgePoint Newresult;
-        GetData(Newresult.Radius, Status.MPI_SOURCE);
-        GetData(Newresult.Offset, Status.MPI_SOURCE);
-        GetData(Newresult.EdgeIndex, Status.MPI_SOURCE);
-        if (Newresult.Radius < Bestresult.Radius) {
-            Bestresult = Newresult;
-        }
-    }
-    return Bestresult;
-}
-*/
 void MixMpiHelper::SendCmd(unsigned cmd, int destTask)
 {
     CommLogEx("SendCmd " << cmdToStr[cmd] << " to " << destTask);

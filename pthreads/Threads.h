@@ -12,12 +12,6 @@
 
 //#define THREADS_CERR_LOG
 
-/** Constants */
-
-const int OK = 0;
-
-/** Primitives */
-
 class CMutex {
 public:
     CMutex(std::string name): 
@@ -112,7 +106,7 @@ public:
         }
     }
     bool TryPop(TData& res) {
-        if (OK != m_pop_sem.Get(false)) {
+        if (0 != m_pop_sem.Get(false)) {
             return false;
         }
         PROTECT;
@@ -154,7 +148,10 @@ struct CLogItem {
     void SetCurrentTime() { m_timeMs = clock()*1000 / CLOCKS_PER_SEC; }
 };
 
-std::ostream& operator<<(std::ostream& out, CLogItem l);
+inline std::ostream& operator<<(std::ostream& out, CLogItem l) {
+    out << l.m_timeMs << " - " << l.m_msg;
+    return out;
+}
 
 class ILogger {
 public:
@@ -190,7 +187,10 @@ struct MixLogger: ILogger {
 
 typedef std::vector<CLogItem> TLogContainer;
 
-TLogContainer& operator<<(TLogContainer& logContainer, CLogItem& logItem);
+inline TLogContainer& operator<<(TLogContainer& logContainer, CLogItem& logItem) {
+    logContainer.push_back(logItem);
+    return logContainer;
+}
 
 struct MixMasterLoger: MixLogger {
     MixMasterLoger(ELogLevel logLevel = E_LOG_DEBUG): MixLogger(logLevel) {}

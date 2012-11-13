@@ -7,13 +7,14 @@
    (ede-proj-target-makefile-program "task1a.out"
     :name "task1a.out"
     :path ""
-    :source '("task1a.cpp" "Threads.cpp")
+    :source '("task1a.cpp")
     :auxsource '("Threads.h")
     )
    (ede-proj-target-makefile-program "task1b.out"
     :name "task1b.out"
     :path ""
-    :source '("task1b.cpp" "Threads.cpp")
+    :source '("task1b.cpp")
+    :auxsource '("Threads.h")
     )
    )
   :variables '(("CFLAGS" . "-pthread"))

@@ -10,8 +10,8 @@ CFLAGS=-pthread
 top=../
 ede_FILES=Project.ede Makefile
 
-queue_out_SOURCES=queue.cpp ../Threads.cpp
-queue.out_OBJ= queue.o ../Threads.o
+queue_out_SOURCES=queue.cpp
+queue.out_OBJ= queue.o
 CXX= g++
 CXX_COMPILE=$(CXX) $(DEFS) $(INCLUDES) $(CPPFLAGS) $(CFLAGS)
 CXX_DEPENDENCIES=-Wp,-MD,.deps/$(*F).P
@@ -20,7 +20,7 @@ VERSION=1.0
 DISTDIR=$(top)-$(VERSION)/unit_tests
 top_builddir = ..
 
-DEP_FILES=.deps/queue.P .deps/Threads.P .deps/Threads.P
+DEP_FILES=.deps/queue.P .deps/Threads.P
 
 all: queue.out
 

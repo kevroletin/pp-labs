@@ -7,7 +7,7 @@
    (ede-proj-target-makefile-program "queue"
     :name "queue.out"
     :path ""
-    :source '("queue.cpp" "../Threads.cpp")
+    :source '("queue.cpp")
     :auxsource '("../Threads.h")
     )
    )

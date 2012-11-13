@@ -5,10 +5,15 @@
   :name "main.out"
   :targets (list 
    (ede-proj-target-makefile-program "main.out"
-    :name "main.out"
+    :name "labyrinth.out"
     :path ""
-    :source '("main.cpp" "mpi_helpers.cpp")
+    :source '("labyrinth.cpp" "mpi_helpers.cpp")
     :auxsource '("mpi_helpers.h" "labyrinth.h")
+    )
+   (ede-proj-target-makefile-program "chess.out"
+    :name "chess.out"
+    :path ""
+    :source '("chess.cpp")
     )
    )
   :variables '(("CFLAGS" . "-Wall $(shell mpic++ --showme:compile)") ("LDFLAGS" . "-Wall $(shell mpic++ --showme:link)"))

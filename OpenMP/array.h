@@ -9,7 +9,6 @@ typedef unsigned TData;
 #define LOG(str)
 //#define LOG(str) std::cerr << str << "\n";
 
-//template <class TData> dislike templated due to lazy code generation
 enum ESortFinOptimization {
     EOptFinInsert,
     EOptFinQsort,

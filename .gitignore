@@ -3,3 +3,4 @@
 *.log
 *.deps
 *.out
+*task*.txt

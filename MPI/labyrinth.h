@@ -365,7 +365,6 @@ protected:
         AlgoLogEx("GoDFS" << " x: " << x << " y: " << y);
         if (m_size.Inside(x, y)) {
             if (Fin == GetType(x, y)) {
-                AlgoLogEx("Look at me\n" << GetData());
                 AlgoLogEx("GoDFS: Fin found x: " << x << " y: " << y);
                 if (currDist < GetData(x, y)) {
                     AlgoLogEx("GoDFS: updated fin value " << GetData(x, y) << " - " << currDist);

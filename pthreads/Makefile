@@ -10,19 +10,19 @@ CFLAGS=-pthread
 top="$(CURDIR)"/
 ede_FILES=Project.ede Makefile
 
-task1a_out_SOURCES=task1a.cpp Threads.cpp
-task1a.out_OBJ= task1a.o Threads.o
+task1a_out_SOURCES=task1a.cpp
+task1a.out_OBJ= task1a.o
 CXX= g++
 CXX_COMPILE=$(CXX) $(DEFS) $(INCLUDES) $(CPPFLAGS) $(CFLAGS)
 CXX_DEPENDENCIES=-Wp,-MD,.deps/$(*F).P
 CXX_LINK=$(CXX) $(CFLAGS) $(LDFLAGS) -L.
-task1b_out_SOURCES=task1b.cpp Threads.cpp
-task1b.out_OBJ= task1b.o Threads.o
+task1b_out_SOURCES=task1b.cpp
+task1b.out_OBJ= task1b.o
 VERSION=1.0
 DISTDIR=$(top)-$(VERSION)
 top_builddir = 
 
-DEP_FILES=.deps/task1a.P .deps/Threads.P .deps/Threads.P .deps/task1b.P .deps/Threads.P
+DEP_FILES=.deps/task1a.P .deps/Threads.P .deps/task1b.P .deps/Threads.P
 
 all: task1a.out task1b.out pp_tests
 

@@ -11,8 +11,8 @@ LDFLAGS=-Wall $(shell mpic++ --showme:link)
 top="$(CURDIR)"/
 ede_FILES=Project.ede Makefile
 
-main_out_SOURCES=main.cpp mpi_helpers.cpp
-main.out_OBJ= main.o mpi_helpers.o
+labyrinth_out_SOURCES=labyrinth.cpp mpi_helpers.cpp
+labyrinth.out_OBJ= labyrinth.o mpi_helpers.o
 CXX= g++
 CXX_COMPILE=$(CXX) $(DEFS) $(INCLUDES) $(CPPFLAGS) $(CFLAGS)
 CXX_DEPENDENCIES=-Wp,-MD,.deps/$(*F).P
@@ -21,9 +21,9 @@ VERSION=1.0
 DISTDIR=$(top)main.out-$(VERSION)
 top_builddir = 
 
-DEP_FILES=.deps/main.P .deps/mpi_helpers.P .deps/mpi_helpers.P .deps/labyrinth.P
+DEP_FILES=.deps/labyrinth.P .deps/mpi_helpers.P .deps/mpi_helpers.P .deps/labyrinth.P
 
-all: main.out 
+all: labyrinth.out 
 
 DEPS_MAGIC := $(shell mkdir .deps > /dev/null 2>&1 || :)
 -include $(DEP_FILES)
@@ -32,7 +32,7 @@ DEPS_MAGIC := $(shell mkdir .deps > /dev/null 2>&1 || :)
 	@echo '$(CXX_COMPILE) -c $<'; \
 	$(CXX_COMPILE) $(CXX_DEPENDENCIES) -o $@ -c $<
 
-main.out: $(main.out_OBJ)
+labyrinth.out: $(labyrinth.out_OBJ)
 	$(CXX_LINK) -o $@ $^ $(LDDEPS)
 
 .PHONY:
@@ -51,7 +51,7 @@ clean:
 dist:
 	rm -rf $(DISTDIR)
 	mkdir $(DISTDIR)
-	cp $(main_out_SOURCES) $(ede_FILES) $(DISTDIR)
+	cp $(labyrinth_out_SOURCES) $(ede_FILES) $(DISTDIR)
 	$(MAKE) -C unit_tests $(MFLAGS) DISTDIR=$(DISTDIR)/unit_tests dist
 	tar -cvzf $(DISTDIR).tar.gz $(DISTDIR)
 	rm -rf $(DISTDIR)
