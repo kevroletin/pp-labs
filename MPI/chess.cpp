@@ -9,8 +9,10 @@
 
 int main()
 {
-    CCoord2D a(10, 10), b(5, 5), c(6, 6);
-    std::cout << (a + b);
+    CPawn f;
+    f.m_color = EBlack;
+//    f.BeforeMove();
+    std::cout << f.PlanMove(CCoord2D(0, -2)) << "\n";
     return 0;
 }
 
