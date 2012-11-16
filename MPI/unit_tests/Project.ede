@@ -16,6 +16,11 @@
     :source '("t2.cpp" "../mpi_helpers.cpp")
     :auxsource '("../mpi_helpers.h" "../labyrinth.h")
     )
+   (ede-proj-target-makefile-program "t3.out"
+    :name "t3.out"
+    :path ""
+    :source '("t3.cpp")
+    )
    )
   :variables '(("CFLAGS" . "-ggdb -Wall $(shell mpic++ --showme:compile)") ("LDFLAGS" . "-ggdb -Wall $(shell mpic++ --showme:link)"))
   :configuration-variables 'nil

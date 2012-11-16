@@ -17,13 +17,15 @@ CXX= g++
 CXX_COMPILE=$(CXX) $(DEFS) $(INCLUDES) $(CPPFLAGS) $(CFLAGS)
 CXX_DEPENDENCIES=-Wp,-MD,.deps/$(*F).P
 CXX_LINK=$(CXX) $(CFLAGS) $(LDFLAGS) -L.
+chess_out_SOURCES=chess.cpp
+chess.out_OBJ= chess.o
 VERSION=1.0
-DISTDIR=$(top)main.out-$(VERSION)
+DISTDIR=$(top)MPI-$(VERSION)
 top_builddir = 
 
-DEP_FILES=.deps/labyrinth.P .deps/mpi_helpers.P .deps/mpi_helpers.P .deps/labyrinth.P
+DEP_FILES=.deps/labyrinth.P .deps/mpi_helpers.P .deps/mpi_helpers.P .deps/labyrinth.P .deps/chess.P .deps/chess.P
 
-all: labyrinth.out 
+all: labyrinth.out chess.out 
 
 DEPS_MAGIC := $(shell mkdir .deps > /dev/null 2>&1 || :)
 -include $(DEP_FILES)
@@ -33,6 +35,9 @@ DEPS_MAGIC := $(shell mkdir .deps > /dev/null 2>&1 || :)
 	$(CXX_COMPILE) $(CXX_DEPENDENCIES) -o $@ -c $<
 
 labyrinth.out: $(labyrinth.out_OBJ)
+	$(CXX_LINK) -o $@ $^ $(LDDEPS)
+
+chess.out: $(chess.out_OBJ)
 	$(CXX_LINK) -o $@ $^ $(LDDEPS)
 
 .PHONY:
@@ -51,7 +56,7 @@ clean:
 dist:
 	rm -rf $(DISTDIR)
 	mkdir $(DISTDIR)
-	cp $(labyrinth_out_SOURCES) $(ede_FILES) $(DISTDIR)
+	cp $(labyrinth_out_SOURCES) $(chess_out_SOURCES) $(ede_FILES) $(DISTDIR)
 	$(MAKE) -C unit_tests $(MFLAGS) DISTDIR=$(DISTDIR)/unit_tests dist
 	tar -cvzf $(DISTDIR).tar.gz $(DISTDIR)
 	rm -rf $(DISTDIR)

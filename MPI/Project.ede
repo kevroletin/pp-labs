@@ -1,10 +1,10 @@
-;; Object main.out
+;; Object MPI
 ;; EDE Project Files are auto generated: Do Not Edit
-(ede-proj-project "main.out"
+(ede-proj-project "MPI"
   :file "Project.ede"
-  :name "main.out"
+  :name "MPI"
   :targets (list 
-   (ede-proj-target-makefile-program "main.out"
+   (ede-proj-target-makefile-program "labyrinth.out"
     :name "labyrinth.out"
     :path ""
     :source '("labyrinth.cpp" "mpi_helpers.cpp")
@@ -14,6 +14,7 @@
     :name "chess.out"
     :path ""
     :source '("chess.cpp")
+    :auxsource '("chess.h")
     )
    )
   :variables '(("CFLAGS" . "-Wall $(shell mpic++ --showme:compile)") ("LDFLAGS" . "-Wall $(shell mpic++ --showme:link)"))
