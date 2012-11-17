@@ -1,6 +1,7 @@
 #ifndef _LABYRINTH_H
 #define _LABYRINTH_H
 
+#include "common.h"
 #include <string>
 #include <sstream>
 #include <list>
@@ -8,8 +9,6 @@
 #include <queue>
 #include <cassert>
 #include <fstream>
-
-typedef unsigned uint;
 
 #define Log(str) CLogHelper L(*this, str);
 #define LogEx(data)                              \
@@ -26,7 +25,6 @@ typedef unsigned uint;
 #    define AlgoLogEx(data)
 #endif
 
-enum ESide { ETop, ERight, EBottom, ELeft };
 extern int moveDx[];
 extern int moveDy[];
 extern std::string sideStr[];

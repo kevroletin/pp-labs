@@ -1,23 +1,20 @@
 #ifndef _CHESS_H
 #define _CHESS_H
 
+#include "common.h"
 #include <cassert>
 #include <vector>
 #include <iostream>
 #include <algorithm>
 
-#undef MPI
-//#define MPI
-
 #if 0
-#  define Log(str) std::cerr << str << "\n";
+#  define ChessLog(str) std::cerr << str << "\n";
 #else
-#  define Log(str)
+#  define ChessLog(str)
 #endif
 
-
-inline int sign(int x) { return x > 0 ? 1 : x == 0 ? 0 : -1; }
-inline void printSpaces(std::ostream& out, int x) { while(x--) { out << ' '; } }
+static inline int sign(int x) { return x > 0 ? 1 : x == 0 ? 0 : -1; }
+static inline void printSpaces(std::ostream& out, int x) { while(x--) { out << ' '; } }
 
 struct CCoord2D {
     CCoord2D(int x = 0, int y = 0): m_x(x), m_y(y) {}
@@ -33,7 +30,7 @@ struct CCoord2D {
     int m_y;
 };
 
-std::ostream& operator<<(std::ostream& out, CCoord2D c) {
+static inline std::ostream& operator<<(std::ostream& out, CCoord2D c) {
     out << "x:" << c.m_x << " y:" << c.m_y;
     return out;
 }
@@ -52,7 +49,7 @@ struct CCoord3D {
     int m_level;
 };
 
-std::ostream& operator<<(std::ostream& out, CCoord3D c) {
+static inline std::ostream& operator<<(std::ostream& out, CCoord3D c) {
     out << "x:" << c.m_x << " y:" << c.m_y << " level:" << c.m_level;
     return out;
 }
@@ -63,14 +60,14 @@ enum EColor {
     EBlack = -1,
 };
 
-std::string colorToStr[] = { "white", "none", "black" };
+static std::string colorToStr[] = { "white", "none", "black" };
 
-enum ESide {
+/*enum ESide {
     ETop,
     ERight,
     EBottom,
     ELeft,
-};
+    };*/
 
 enum EPinSide {
     ELeftTop,
@@ -88,7 +85,7 @@ enum EPieces {
     ERook    //Ладья
 };
 
-std::string piecesToStr[] = { "K", "P", "Q", "K", "B", "R" };
+static std::string piecesToStr[] = { "K", "P", "Q", "K", "B", "R" };
 
 struct CMove {
     CMove(int dx, int dy, bool jump = false): m_dx(dx), m_dy(dy), m_jump(jump) {}
@@ -98,19 +95,19 @@ struct CMove {
     bool m_jump;
 };
 
-CCoord2D operator+(CCoord2D c, CMove m) {
+inline CCoord2D operator+(CCoord2D c, CMove m) {
     c.m_x += m.m_dx;
     c.m_y += m.m_dy;
     return c;
 }
 
-CCoord3D operator+(CCoord3D c, CMove m) {
+inline CCoord3D operator+(CCoord3D c, CMove m) {
     c.m_x += m.m_dx;
     c.m_y += m.m_dy;
     return c;
 }
 
-std::ostream& operator<<(std::ostream& out, CMove move) {
+static inline std::ostream& operator<<(std::ostream& out, CMove move) {
     if (move.m_jump) out << "*";    
     out << "dx:" << move.m_dx << " dy:" << move.m_dy;
     return out;
@@ -119,7 +116,7 @@ std::ostream& operator<<(std::ostream& out, CMove move) {
 typedef std::vector<CMove> T2DPath;
 typedef std::vector<CCoord3D> T3DPath;
 
-std::ostream& operator<<(std::ostream& out, const T2DPath& path) {
+static inline std::ostream& operator<<(std::ostream& out, const T2DPath& path) {
     T2DPath::const_iterator it = path.begin();
     if (it != path.end()) {
         out << *it;
@@ -139,7 +136,7 @@ struct CPiece {
     virtual void BeforeMove() {}
 };
 
-std::ostream& operator<<(std::ostream& out, CPiece& p) {
+static inline std::ostream& operator<<(std::ostream& out, CPiece& p) {
     std::string str = piecesToStr[p.GetPieceTipe()];
     if (EBlack == p.m_color) {
         std::transform(str.begin(), str.end(), str.begin(), tolower);
@@ -326,34 +323,29 @@ struct CBoard {
         return Get(ToRelativeCoord(p.Get2DPart()));
     }    
     
-#ifdef MPI
-#  error "Not implemented"
-#else
     bool CheckMove(CCoord3D fromAbs, CCoord3D toAbs, CBoardBroadcast& broadcast) {
-        Log("Check we have from coord " << fromAbs);
-//        if (!ContainCoord_abs(fromAbs)) return false;
+        ChessLog("Check we have from coord " << fromAbs);
         if (NULL == GetSafe_abs(fromAbs)) return false;
 
         CCoord2D from = ToRelativeCoord(fromAbs);
         CCoord2D to = ToRelativeCoord(toAbs);
 
-//        Log("Check we own piece on from cord");
-        Log("Check someone have to coord");
+        ChessLog("Check someone have to coord");
         if (!broadcast.ContainCoord_abs(toAbs)) return false;
-        Log("Check does to coord have not our pieces");
+        ChessLog("Check does to coord have not our pieces");
         if (broadcast.CellColor(toAbs) == Get(from)->m_color && Get(from)->m_color != ENone) return false;
-        Log("Build move path");
+        ChessLog("Build move path");
         
         T2DPath path = Get(from)->PlanMove(to - from);
-        Log("Path: " << path);
+        ChessLog("Path: " << path);
         if (0 == path.size()) return false;
         
         CCoord2D p = fromAbs.Get2DPart();
         for (T2DPath::iterator it = path.begin(); it != path.end(); ++it) {
             p = p + *it;
-            Log("p: " << p);
+            ChessLog("p: " << p);
             if (it != --path.end() && it->m_jump == false && broadcast.AnyCellNonEmpty_abs(p)) {
-                Log("someone have here piece");
+                ChessLog("someone have here piece");
                 return false;
             }
         }
@@ -361,7 +353,6 @@ struct CBoard {
 
         return true;
     }
-#endif
     CCoord2D ToRelativeCoord(CCoord2D c) { return c - m_absoluteCoord.Get2DPart(); }
     CCoord2D ToRelativeCoord(CCoord3D c) { return c.Get2DPart() - m_absoluteCoord.Get2DPart(); }
     EColor GetFigureColor_abs(CCoord2D absCoord) {
@@ -477,14 +468,14 @@ struct CSimpleBroadcast: public CBoardBroadcast {
         return true;
     }
     bool MoveBoard(CCoord3D fromAbs, CCoord3D toAbs) {
-        Log("Check allowed attack board level " << toAbs.m_level);
+        ChessLog("Check allowed attack board level " << toAbs.m_level);
         if (toAbs.m_level != 2 && toAbs.m_level != 4 && toAbs.m_level != 6) return false;
-        Log("Find attack board");
+        ChessLog("Find attack board");
         CAttackBoard* b = GetAttackBoard(fromAbs);
         if (NULL == b) return false;
-        Log("Check if new coords are free");
+        ChessLog("Check if new coords are free");
         if (NULL != GetAttackBoard(toAbs)) return false;
-        Log("Update coords");
+        ChessLog("Update coords");
         // TODO: add proper cheks
         b->m_absoluteCoord = toAbs;
         return true;

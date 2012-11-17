@@ -1,6 +1,7 @@
 #include "mpi_helpers.h"
 #include "labyrinth.h"
 #include "mpi.h"
+#include "chess.h"
 
 #include <cassert> // TODO: throw errors enstead
 #include <fstream>
@@ -143,6 +144,23 @@ void MixMpiHelper::GetData(std::string& result, int sourceTask, MPI_Status* pSta
     CommLogEx("GetData " << result);
 }
 
+void MixMpiHelper::GetData(CCoord2D& result, int sourceTask, MPI_Status* pStatus)
+{
+    CommLogEx("GetData CCoord2D from " << sourceTask);
+    GetData(result.m_x, sourceTask, pStatus);
+    GetData(result.m_y, sourceTask, pStatus);
+    CommLogEx("GetData " << result);
+}
+
+void MixMpiHelper::GetData(CCoord3D& result, int sourceTask, MPI_Status* pStatus)
+{
+    CommLogEx("GetData CCoord2D from " << sourceTask);
+    GetData(result.m_x, sourceTask, pStatus);
+    GetData(result.m_y, sourceTask, pStatus);
+    GetData(result.m_level, sourceTask, pStatus);
+    CommLogEx("GetData " << result);
+}
+
 void MixMpiHelper::SendData(unsigned data, int destTask)
 {
     CommLogEx("SendData uint " << data << " to " << destTask);
@@ -208,6 +226,20 @@ void MixMpiHelper::SendData(std::string data, int destTask)
     MPI_Send(&data[0], data.size(), MPI_CHAR, destTask, MT_DATA_STREAM, MPI_COMM_WORLD);    
 }
 
+void MixMpiHelper::SendData(CCoord2D data, int destTask)
+{
+    CommLogEx("SendData CCoord2D to " << destTask);
+    SendData(data.m_x, destTask);
+    SendData(data.m_y, destTask);
+}
+
+void MixMpiHelper::SendData(CCoord3D data, int destTask)
+{
+    CommLogEx("SendData CCoord3D to " << destTask);
+    SendData(data.m_x, destTask);
+    SendData(data.m_y, destTask);
+    SendData(data.m_level, destTask);
+}
 
 void MixMpiHelper::GetDataBcast(unsigned& result)
 {

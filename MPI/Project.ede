@@ -8,13 +8,13 @@
     :name "labyrinth.out"
     :path ""
     :source '("labyrinth.cpp" "mpi_helpers.cpp")
-    :auxsource '("mpi_helpers.h" "labyrinth.h")
+    :auxsource '("mpi_helpers.h" "labyrinth.h" "labyrinth_commands.h")
     )
    (ede-proj-target-makefile-program "chess.out"
     :name "chess.out"
     :path ""
-    :source '("chess.cpp")
-    :auxsource '("chess.h")
+    :source '("chess.cpp" "mpi_helpers.cpp")
+    :auxsource '("chess.h" "common.h")
     )
    )
   :variables '(("CFLAGS" . "-Wall $(shell mpic++ --showme:compile)") ("LDFLAGS" . "-Wall $(shell mpic++ --showme:link)"))

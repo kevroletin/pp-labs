@@ -9,8 +9,8 @@
 #include <sstream>
 #include <cstring>
 
-//#define STDERR_LOG_DUMP
-//#define DEBUG_COMMUNICATION
+#define STDERR_LOG_DUMP
+#define DEBUG_COMMUNICATION
 
 typedef unsigned uint;
 typedef unsigned char uchar;
@@ -42,7 +42,10 @@ enum ECommands {
     CMD_SEND_WAY,
     CMD_NO_WAY,
     CMD_ENTER,
-    CMD_EXIT
+    CMD_EXIT,
+    CMD_MOVE,
+    CMD_OK,
+    CMD_FAIL
 };
 
 static std::string cmdToStr[] = {
@@ -60,6 +63,9 @@ static std::string cmdToStr[] = {
     "CMD_NO_WAY",
     "CMD_ENTER",
     "CMD_EXIT",
+    "CMD_MOVE",
+    "CMD_OK",
+    "CMD_FAIL"
 };
 
 struct CLogedItem {
@@ -131,6 +137,8 @@ class CSquareField;
 class CMatrix;
 class CSideCoord;
 class CPointCoord;
+class CCoord2D;
+class CCoord3D;
 
 struct MixMpiHelper: virtual public IHaveRank, virtual public ILogger {
     void SendCmd(unsigned cmd, int destTask = 0);
@@ -145,6 +153,8 @@ struct MixMpiHelper: virtual public IHaveRank, virtual public ILogger {
     void GetData(CSideCoord&      result, int sourceTask, MPI_Status* pStatus = NULL);
     void GetData(CPointCoord&     result, int sourceTask, MPI_Status* pStatus = NULL);
     void GetData(std::string&     result, int sourceTask, MPI_Status* pStatus = NULL);    
+    void GetData(CCoord2D&        result, int sourceTask, MPI_Status* pStatus = NULL);    
+    void GetData(CCoord3D&        result, int sourceTask, MPI_Status* pStatus = NULL);    
     void SendData(unsigned data, int destTask);
     void SendData(int      data, int destTask);
     void SendData(double   data, int destTask);
@@ -154,6 +164,8 @@ struct MixMpiHelper: virtual public IHaveRank, virtual public ILogger {
     void SendData(CSideCoord      data, int destTask);
     void SendData(CPointCoord     data, int destTask);
     void SendData(std::string     data, int destTask);
+    void SendData(CCoord2D        data, int destTask);
+    void SendData(CCoord3D        data, int destTask);
     void GetDataBcast(unsigned& result);
     void SendDataBcast(unsigned data);
     void ThrowBadCmd(ECommands expectedCmd, ECommands gotCmd);
