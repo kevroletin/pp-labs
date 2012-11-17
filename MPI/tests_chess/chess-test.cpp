@@ -3,15 +3,27 @@
 #include <iostream>
 #include <cassert>
 #include <vector>
+#include <fstream>
 
-int main()
+int main(int argc, char* argv[])
 {
-    CSimpleBroadcast bc;
-    std::cerr << bc.Move(CCoord3D(1, 2, 1), CCoord3D(1, 4, 3)) << "\n";
-    bc.Dump(std::cerr);
-    std::cerr << bc.Move(CCoord3D(1, 4, 3), CCoord3D(1, 5, 3)) << "\n";
-    bc.Dump(std::cerr);
-    
+    std::ifstream in;
+    std::ofstream out;
+    assert(argc == 3);
+    in.open(argv[1]);
+    out.open(argv[2]);
+    {
+        CSimpleBroadcast bc;
+        char c;
+        int xf, yf, levelf;
+        int xt, yt, levelt; 
+        while( in >> c >> xf >> yf >> levelf >> xt >> yt >> levelt ) {
+            bc.Move(CCoord3D(xf, yf, levelf), CCoord3D(xt, yt, levelt));
+            bc.Dump(out);
+        }
+    }
+    in.close();
+    out.close();
     return 0;
 }
 

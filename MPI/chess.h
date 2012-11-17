@@ -9,6 +9,13 @@
 #undef MPI
 //#define MPI
 
+#if 0
+#  define Log(str) std::cerr << str << "\n";
+#else
+#  define Log(str)
+#endif
+
+
 inline int sign(int x) { return x > 0 ? 1 : x == 0 ? 0 : -1; }
 inline void printSpaces(std::ostream& out, int x) { while(x--) { out << ' '; } }
 
@@ -304,11 +311,15 @@ struct CBoard {
     CPiece*& Get(int x, int y) {
         return m_field[x][y];
     }
-    CPiece* GetSafe_abs(CCoord2D p) {
-        return GetSafe(ToRelativeCoord(p));
-    }
     CPiece*& Get_abs(CCoord2D p) {
         return Get(ToRelativeCoord(p));
+    }
+    CPiece*& Get_abs(CCoord3D p) {
+        assert(p.m_level == m_absoluteCoord.m_level);
+        return Get(ToRelativeCoord(p.Get2DPart()));
+    }    
+    CPiece* GetSafe_abs(CCoord2D p) {
+        return GetSafe(ToRelativeCoord(p));
     }
     CPiece* GetSafe_abs(CCoord3D p) {
         if (!ContainCoord_abs(p)) return NULL;
@@ -318,25 +329,37 @@ struct CBoard {
 #ifdef MPI
 #  error "Not implemented"
 #else
-    bool PlanMove(CCoord3D fromAbs, CCoord3D to, CBoardBroadcast& broadcast) {
+    bool CheckMove(CCoord3D fromAbs, CCoord3D toAbs, CBoardBroadcast& broadcast) {
+        Log("Check we have from coord " << fromAbs);
+//        if (!ContainCoord_abs(fromAbs)) return false;
+        if (NULL == GetSafe_abs(fromAbs)) return false;
+
         CCoord2D from = ToRelativeCoord(fromAbs);
-        if (!ContainCoord_abs(from)) return false;
-        if (!broadcast.ContainCoord_abs(to)) return false;
-        if (broadcast.CellColor(to) == Get(from)->m_color && Get(from)->m_color != ENone) return false;
+        CCoord2D to = ToRelativeCoord(toAbs);
+
+//        Log("Check we own piece on from cord");
+        Log("Check someone have to coord");
+        if (!broadcast.ContainCoord_abs(toAbs)) return false;
+        Log("Check does to coord have not our pieces");
+        if (broadcast.CellColor(toAbs) == Get(from)->m_color && Get(from)->m_color != ENone) return false;
+        Log("Build move path");
         
-        T2DPath path = Get(from)->PlanMove(to.Get2DPart());
+        T2DPath path = Get(from)->PlanMove(to - from);
+        Log("Path: " << path);
         if (0 == path.size()) return false;
         
-        CCoord2D p = from;
+        CCoord2D p = fromAbs.Get2DPart();
         for (T2DPath::iterator it = path.begin(); it != path.end(); ++it) {
             p = p + *it;
+            Log("p: " << p);
             if (it != --path.end() && it->m_jump == false && broadcast.AnyCellNonEmpty_abs(p)) {
+                Log("someone have here piece");
                 return false;
             }
         }
-        assert( to.Get2DPart() == p );
+        assert( toAbs.Get2DPart() == p );
 
-        return false;
+        return true;
     }
 #endif
     CCoord2D ToRelativeCoord(CCoord2D c) { return c - m_absoluteCoord.Get2DPart(); }
@@ -396,22 +419,60 @@ struct CAttackBoard: public CBoard {
     }
 };
 
-struct CSimpleBroadcast {
-    CMainBoard mainBoards[3];
-    CAttackBoard attackBoards[4];
+struct CSimpleBroadcast: public CBoardBroadcast {
+    CMainBoard m_mainBoards[3];
+    CAttackBoard m_attackBoards[4];
+    CBoard* GetBoard(CCoord3D absCoord) {
+        for (int i = 0; i < 3; ++i) {
+            if (m_mainBoards[i].ContainCoord_abs(absCoord)) {
+                return &m_mainBoards[i];
+            }
+        }
+        for (int i = 0; i < 4; ++i) {
+            if (m_attackBoards[i].ContainCoord_abs(absCoord)) {
+                return &m_attackBoards[i];
+            }
+        }        
+        return NULL;
+    }
+    virtual EColor CellColor(CCoord3D absCoord) {
+        for (int i = 0; i < 3; ++i) {
+            if (m_mainBoards[i].ContainCoord_abs(absCoord)) {
+                CPiece* p = m_mainBoards[i].GetSafe_abs(absCoord);
+                if (NULL != p) return p->m_color;
+            }
+        }
+        for (int i = 0; i < 4; ++i) {
+            if (m_attackBoards[i].ContainCoord_abs(absCoord)) {
+                CPiece* p = m_attackBoards[i].GetSafe_abs(absCoord);
+                if (NULL != p) return p->m_color;
+            }
+        }        
+        return ENone;
+    }
+    bool Move(CCoord3D fromAbs, CCoord3D toAbs) {
+        CBoard* bf = GetBoard(fromAbs);
+        CBoard* bt = GetBoard(toAbs);
+        if (NULL == bf || NULL == bt) return NULL;
+        if (!bf->CheckMove(fromAbs, toAbs, *this)) return false;
+        delete bt->Get_abs(toAbs);
+        bt->Get_abs(toAbs) = bf->Get_abs(fromAbs);
+        bf->Get_abs(fromAbs) = NULL;
+        return true;
+    }
     CSimpleBroadcast() {
-        for (int i = 0; i < 3; ++i) mainBoards[i].Init();
-        for (int i = 0; i < 4; ++i) attackBoards[i].Init();
-        SetWhiteFigures(mainBoards[0], attackBoards[0], attackBoards[1]);
-        SetBlackFigures(mainBoards[2], attackBoards[2], attackBoards[3]);
-        mainBoards[0].m_absoluteCoord = CCoord3D(1, 1, 1);
-        mainBoards[1].m_absoluteCoord = CCoord3D(1, 3, 3);
-        mainBoards[2].m_absoluteCoord = CCoord3D(1, 5, 5);
+        for (int i = 0; i < 3; ++i) m_mainBoards[i].Init();
+        for (int i = 0; i < 4; ++i) m_attackBoards[i].Init();
+        SetWhiteFigures(m_mainBoards[0], m_attackBoards[0], m_attackBoards[1]);
+        SetBlackFigures(m_mainBoards[2], m_attackBoards[2], m_attackBoards[3]);
+        m_mainBoards[0].m_absoluteCoord = CCoord3D(1, 1, 1);
+        m_mainBoards[1].m_absoluteCoord = CCoord3D(1, 3, 3);
+        m_mainBoards[2].m_absoluteCoord = CCoord3D(1, 5, 5);
 
-        attackBoards[0].AttachToPin(ELeftTop, mainBoards[0].GetCornerCoord_abs(ELeftTop));
-        attackBoards[1].AttachToPin(ERightTop, mainBoards[0].GetCornerCoord_abs(ERightTop));
-        attackBoards[2].AttachToPin(ELeftBottom, mainBoards[2].GetCornerCoord_abs(ELeftBottom));
-        attackBoards[3].AttachToPin(ERightBottom, mainBoards[2].GetCornerCoord_abs(ERightBottom));
+        m_attackBoards[0].AttachToPin(ELeftTop, m_mainBoards[0].GetCornerCoord_abs(ELeftTop));
+        m_attackBoards[1].AttachToPin(ERightTop, m_mainBoards[0].GetCornerCoord_abs(ERightTop));
+        m_attackBoards[2].AttachToPin(ELeftBottom, m_mainBoards[2].GetCornerCoord_abs(ELeftBottom));
+        m_attackBoards[3].AttachToPin(ERightBottom, m_mainBoards[2].GetCornerCoord_abs(ERightBottom));
     }
     void SetWhiteFigures(CMainBoard& m, CAttackBoard& a1, CAttackBoard& a2) {
         m.Get(0, 1) = new CPawn;
@@ -465,42 +526,42 @@ struct CSimpleBroadcast {
     }
     virtual bool AnyCellNonEmpty_abs(CCoord2D absCoord) {
         for (int i = 0; i < 3; ++i) {
-            if (NULL != mainBoards[i].GetSafe(absCoord)) return false;
+            if (NULL != m_mainBoards[i].GetSafe(absCoord)) return true;
         }
         for (int i = 0; i < 4; ++i) {
-            if (NULL != attackBoards[i].GetSafe(absCoord)) return false;
+            if (NULL != m_attackBoards[i].GetSafe(absCoord)) return true;
         }
-        return true;
+        return false;
     }
     virtual EColor CellColor_abs(CCoord3D absCoord) {
         for (int i = 0; i < 3; ++i) {
-            if (NULL != mainBoards[i].GetSafe_abs(absCoord)) {
-                return mainBoards[i].GetSafe_abs(absCoord)->m_color;
+            if (NULL != m_mainBoards[i].GetSafe_abs(absCoord)) {
+                return m_mainBoards[i].GetSafe_abs(absCoord)->m_color;
             }
         }
         for (int i = 0; i < 4; ++i) {
-            if (NULL != attackBoards[i].GetSafe_abs(absCoord)) {
-                return attackBoards[i].GetSafe_abs(absCoord)->m_color;
+            if (NULL != m_attackBoards[i].GetSafe_abs(absCoord)) {
+                return m_attackBoards[i].GetSafe_abs(absCoord)->m_color;
             }
         }
         return ENone;
     }
     virtual bool ContainCoord_abs(CCoord3D absCoord) {
         for (int i = 0; i < 3; ++i) {
-            if (mainBoards[i].ContainCoord_abs(absCoord)) return true;
+            if (m_mainBoards[i].ContainCoord_abs(absCoord)) return true;
         }
         for (int i = 0; i < 4; ++i) {
-            if (attackBoards[i].ContainCoord_abs(absCoord)) return true;
+            if (m_attackBoards[i].ContainCoord_abs(absCoord)) return true;
         }
         return ENone;        
     }
     void Dump(std::ostream& out) {
         for (int i = 0; i < 3; ++i) {
-            out << "main board#" << i << ": " << mainBoards[i].m_absoluteCoord << "\n";
+            out << "main board#" << i << ": " << m_mainBoards[i].m_absoluteCoord << "\n";
         }
         for (int i = 0; i < 4; ++i) {
-            out << "attack board#" << i << ": " << attackBoards[i].m_absoluteCoord << " " <<
-                colorToStr[attackBoards[i].m_color + 1] << "\n";
+            out << "attack board#" << i << ": " << m_attackBoards[i].m_absoluteCoord << " " <<
+                colorToStr[m_attackBoards[i].m_color + 1] << "\n";
         }
         out << "  ";
         for (int i = 0; i < 6; ++i) {
@@ -509,15 +570,15 @@ struct CSimpleBroadcast {
         }
         out << "\n";
         DumpAttackBoardsLine(out, 0, 2);
-        mainBoards[0].Dump(out, 2);
+        m_mainBoards[0].Dump(out, 2);
         DumpAttackBoardsLine(out, 4, 2);
 
         DumpAttackBoardsLine(out, 2, 4);
-        mainBoards[1].Dump(out, 2);
+        m_mainBoards[1].Dump(out, 2);
         DumpAttackBoardsLine(out, 6, 4);
         
         DumpAttackBoardsLine(out, 4, 6);
-        mainBoards[2].Dump(out, 2);
+        m_mainBoards[2].Dump(out, 2);
         DumpAttackBoardsLine(out, 8, 6);
     }
     void DumpAttackBoardsLine(std::ostream& out, int startY, int level) {
@@ -528,12 +589,12 @@ struct CSimpleBroadcast {
                 bool printed = false;
                 
                 for (int i = 0; i < 4 && !printed; ++i) {
-                    if (attackBoards[i].m_absoluteCoord.m_level != level) continue;
+                    if (m_attackBoards[i].m_absoluteCoord.m_level != level) continue;
                     CCoord2D p = CCoord2D(x, y);
-                    if (attackBoards[i].ContainCoord_abs(p)) {
+                    if (m_attackBoards[i].ContainCoord_abs(p)) {
                         inside = true;
-                        if (NULL != attackBoards[i].GetSafe_abs(p)) {
-                            out << *attackBoards[i].GetSafe_abs(p);
+                        if (NULL != m_attackBoards[i].GetSafe_abs(p)) {
+                            out << *m_attackBoards[i].GetSafe_abs(p);
                             printed = true;
                         }
                     }

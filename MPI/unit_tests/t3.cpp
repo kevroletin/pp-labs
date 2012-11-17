@@ -97,7 +97,6 @@ int main()
         ok(b.GetCornerCoord_abs(ELeftBottom) == CCoord3D(1, 6, 3));
         ok(b.GetCornerCoord_abs(ERightBottom) == CCoord3D(4, 6, 3));
     }
-
     baseName("attack boards");
     {
         CMainBoard b;

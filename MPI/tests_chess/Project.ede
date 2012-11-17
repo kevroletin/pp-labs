@@ -1,0 +1,16 @@
+;; Object MPI
+;; EDE Project Files are auto generated: Do Not Edit
+(ede-proj-project "MPI"
+  :file "Project.ede"
+  :name "MPI"
+  :targets (list 
+   (ede-proj-target-makefile-program "chess-test.out"
+    :name "chess-test.out"
+    :path ".."
+    :source '("chess-test.cpp")
+    :auxsource '("chess.h")
+    )
+   )
+  :variables '(("CFLAGS" . "-Wall $(shell mpic++ --showme:compile) -I..") ("LDFLAGS" . "-Wall $(shell mpic++ --showme:link) -I.."))
+  :configuration-variables 'nil
+  )

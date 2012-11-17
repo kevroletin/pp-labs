@@ -7,6 +7,9 @@
 int main()
 {
     CSimpleBroadcast bc;
+//    bc.Dump(std::cerr);
+
+//    std::cerr << bc.m_mainBoards[0].CheckMove(, bc) << "\n";
     std::cerr << bc.Move(CCoord3D(1, 2, 1), CCoord3D(1, 4, 3)) << "\n";
     bc.Dump(std::cerr);
     std::cerr << bc.Move(CCoord3D(1, 4, 3), CCoord3D(1, 5, 3)) << "\n";
