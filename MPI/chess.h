@@ -435,6 +435,22 @@ struct CSimpleBroadcast: public CBoardBroadcast {
         }        
         return NULL;
     }
+    CMainBoard* GetMainBoard(CCoord3D absCoord) {
+        for (int i = 0; i < 3; ++i) {
+            if (m_mainBoards[i].ContainCoord_abs(absCoord)) {
+                return &m_mainBoards[i];
+            }
+        }
+        return NULL;
+    }
+    CAttackBoard* GetAttackBoard(CCoord3D absCoord) {
+        for (int i = 0; i < 4; ++i) {
+            if (m_attackBoards[i].ContainCoord_abs(absCoord)) {
+                return &m_attackBoards[i];
+            }
+        }
+        return NULL;
+    }
     virtual EColor CellColor(CCoord3D absCoord) {
         for (int i = 0; i < 3; ++i) {
             if (m_mainBoards[i].ContainCoord_abs(absCoord)) {
@@ -458,6 +474,19 @@ struct CSimpleBroadcast: public CBoardBroadcast {
         delete bt->Get_abs(toAbs);
         bt->Get_abs(toAbs) = bf->Get_abs(fromAbs);
         bf->Get_abs(fromAbs) = NULL;
+        return true;
+    }
+    bool MoveBoard(CCoord3D fromAbs, CCoord3D toAbs) {
+        Log("Check allowed attack board level " << toAbs.m_level);
+        if (toAbs.m_level != 2 && toAbs.m_level != 4 && toAbs.m_level != 6) return false;
+        Log("Find attack board");
+        CAttackBoard* b = GetAttackBoard(fromAbs);
+        if (NULL == b) return false;
+        Log("Check if new coords are free");
+        if (NULL != GetAttackBoard(toAbs)) return false;
+        Log("Update coords");
+        // TODO: add proper cheks
+        b->m_absoluteCoord = toAbs;
         return true;
     }
     CSimpleBroadcast() {

@@ -18,7 +18,11 @@ int main(int argc, char* argv[])
         int xf, yf, levelf;
         int xt, yt, levelt; 
         while( in >> c >> xf >> yf >> levelf >> xt >> yt >> levelt ) {
-            bc.Move(CCoord3D(xf, yf, levelf), CCoord3D(xt, yt, levelt));
+            if (c == 'M') {
+                bc.Move(CCoord3D(xf, yf, levelf), CCoord3D(xt, yt, levelt));
+            } else {
+                bc.MoveBoard(CCoord3D(xf, yf, levelf), CCoord3D(xt, yt, levelt));
+            }
             bc.Dump(out);
         }
     }
