@@ -4,15 +4,11 @@
 #include <cassert>
 #include <vector>
 
-#undef MPI
-//#define MPI
-
 int main()
 {
-    CPawn f;
-    f.m_color = EBlack;
-//    f.BeforeMove();
-    std::cout << f.PlanMove(CCoord2D(0, -2)) << "\n";
+    CSimpleBroadcast bc;
+    bc.Dump(std::cerr);
+    
     return 0;
 }
 
