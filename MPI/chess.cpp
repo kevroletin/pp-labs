@@ -34,11 +34,12 @@ struct CSupervisor: public CRankOwner, public MixMpiHelper, public MixTaskLogger
             for (int i = 1; !ok && i <= maxRank; ++i) {
                 if (c == 'M') {
                     SendCmd(CMD_MOVE, i);
-                    SendData(CCoord3D(xf, yf, levelf), i);
-                    SendData(CCoord3D(xt, yt, levelt), i);
                 } else {
-                    // TODO;
+                    SendCmd(CMD_MOVE_BOARD, i);
                 }
+                SendData(CCoord3D(xf, yf, levelf), i);
+                SendData(CCoord3D(xt, yt, levelt), i);
+
                 ECommands cmd = RecieveCmd(i);
                 if (CMD_OK == cmd) {
                     ok = true;
@@ -200,11 +201,23 @@ struct CWorker: public CRankOwner, public MixMpiHelper, public MixTaskLogger {
                 GetData(from, r.MPI_SOURCE);
                 GetData(to, r.MPI_SOURCE);
 
-                if (m_board->CheckMove(from, to, GetRank())) {
+                if (m_board->PerformMove(from, to, GetRank())) {
                     SendCmd(CMD_OK, r.MPI_SOURCE);
                 } else {
                     SendCmd(CMD_FAIL, r.MPI_SOURCE);
                 }
+            } break;
+            case CMD_MOVE_BOARD: {
+                CCoord3D from;
+                CCoord3D to;
+                GetData(from, r.MPI_SOURCE);
+                GetData(to, r.MPI_SOURCE);
+
+                if (m_board->MoveBoard(from, to, GetRank())) {
+                    SendCmd(CMD_OK, r.MPI_SOURCE);
+                } else {
+                    SendCmd(CMD_FAIL, r.MPI_SOURCE);
+                }                
             } break;
             case CMD_DUMP: {
                 CCoord2D size = m_board->GetSize();

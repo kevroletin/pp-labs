@@ -39,7 +39,7 @@ struct CCoord3D {
     CCoord3D operator-(CCoord3D p) { return CCoord3D(m_x - p.m_x, m_y - p.m_y, m_level - p.m_level); }
     CCoord3D operator+(CCoord3D p) { return CCoord3D(m_x + p.m_x, m_y + p.m_y, m_level + p.m_level); }
     bool operator==(CCoord3D p) { return m_x == p.m_x && m_y == p.m_y && m_level == p.m_level; }
-    bool operator!=(CCoord3D p) { return m_x != p.m_x || m_y == p.m_y || m_level == p.m_level; }
+    bool operator!=(CCoord3D p) { return !(*this == p); }
     int m_x;
     int m_y;
     int m_level;
@@ -394,7 +394,7 @@ struct CBoard {
         return Get(ToRelativeCoord(p.Get2DPart()));
     }
 #ifdef USE_MPI
-    bool CheckMove(CCoord3D fromAbs, CCoord3D toAbs, int rank) {
+    bool PerformMove(CCoord3D fromAbs, CCoord3D toAbs, int rank) {
         LogEx("Check we have from coord " << fromAbs);
         if (NULL == GetSafe_abs(fromAbs)) return false;
 
@@ -464,6 +464,16 @@ struct CBoard {
         LogEx("Move is possible");
         return true;
     }
+    bool MoveBoard(CCoord3D fromAbs, CCoord3D toAbs, int rank) {
+        LogEx("Check is it our move " << fromAbs << " vs " << m_absoluteCoord);
+        if (fromAbs != m_absoluteCoord) return false;
+        LogEx("Check is move possible");
+        if (!AllovedBoardMove(fromAbs, toAbs)) return false;
+        LogEx("Check is position free");
+        if (MPI_ContainCoord_abs(rank, toAbs)) return false;
+        m_absoluteCoord = toAbs;
+        return true;
+    }
 #else
     bool CheckMove(CCoord3D fromAbs, CCoord3D toAbs, CBoardBroadcast& broadcast) {
         LogEx("Check we have from coord " << fromAbs);
@@ -523,6 +533,10 @@ struct CBoard {
             if (y == 0) out << "   " << m_absoluteCoord.m_level << "\n";
             else out << "  \n";
         }
+    }
+    static bool AllovedBoardMove(CCoord3D from, CCoord3D to) {
+        // TODO:
+        return true;
     }
 };
 

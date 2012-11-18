@@ -51,7 +51,8 @@ enum ECommands {
     CMD_GIVE_CELL_COLOR,
     CMD_IS_CONTAINS_COORD,
     CMD_SET_PIECE,
-    CMD_GET_BOARD_INFO
+    CMD_GET_BOARD_INFO,
+    CMD_MOVE_BOARD
 };
 
 static std::string cmdToStr[] = {
@@ -76,7 +77,8 @@ static std::string cmdToStr[] = {
     "CMD_IS_CELL_NON_EMPTY",
     "CMD_GIVE_CELL_COLOR",
     "CMD_IS_CONTAINS_COORD",
-    "CMD_SET_PIECE"
+    "CMD_SET_PIECE",
+    "CMD_MOVE_BOARD",
 };
 
 struct CLogedItem {

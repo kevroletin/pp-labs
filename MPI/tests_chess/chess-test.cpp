@@ -5,10 +5,10 @@
 
 #undef Log
 #undef LogEx
-//#define Log(str)
-//#define LogEx(str)
-#define Log(str) std::cerr << str << "\n";
-#define LogEx(str) std::cerr << str << "\n";
+#define Log(str)
+#define LogEx(str)
+//#define Log(str) std::cerr << str << "\n";
+//#define LogEx(str) std::cerr << str << "\n";
 
 #include "chess.h"
 
