@@ -7,6 +7,7 @@
 
 int main(int argc, char* argv[])
 {
+    /*
     std::ifstream in;
     std::ofstream out;
     assert(argc == 3);
@@ -29,6 +30,7 @@ int main(int argc, char* argv[])
     in.close();
     out.close();
     return 0;
+    */
 }
 
 #if 0

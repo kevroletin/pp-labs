@@ -5,8 +5,8 @@
 # EDE is the Emacs Development Environment.
 # http://cedet.sourceforge.net/ede.shtml
 #
-CFLAGS=-Wall $(shell mpic++ --showme:compile) -I..
-LDFLAGS=-Wall $(shell mpic++ --showme:link) -I..
+CFLAGS=-Wall $(shell mpic++ --showme:compile) -I.. -ggdb
+LDFLAGS=-Wall $(shell mpic++ --showme:link) -I.. -ggdb
 
 top=../
 ede_FILES=Project.ede Makefile

@@ -4,11 +4,9 @@
 #include <fstream>
 
 #define USE_MPI
-#define CHESS
 
-#include "mpi_helpers.h"
-#include "chess.h"
-
+#undef Log
+#undef LogEx
 #define Log(str) CLogHelper L(*this, str);
 #define LogEx(data)                              \
     {                                            \
@@ -16,15 +14,10 @@
         ss << data;                              \
         Log(ss.str());                           \
     }
-#if 0
-#    define AlgoLog(str) Log(str)
-#    define AlgoLogEx(data) LogEx(data)
-#else
-#    define AlgoLog(str)
-#    define AlgoLogEx(data)
-#endif
 
-const int maxRank = 7;
+
+#include "mpi_helpers.h"
+#include "chess.h"
 
 struct CSupervisor: public CRankOwner, public MixMpiHelper, public MixTaskLogger {
     CSupervisor(CEnvironment& env, std::istream& in): CRankOwner(0), MixTaskLogger(0), m_env(env)
@@ -64,15 +57,29 @@ struct CSupervisor: public CRankOwner, public MixMpiHelper, public MixTaskLogger
 struct CWorker: public CRankOwner, public MixMpiHelper, public MixTaskLogger {
     CWorker(int rank): CRankOwner(rank), MixTaskLogger(rank)
     {
+        if (rank < 4) {
+            CMainBoard* b = new CMainBoard(*this, *this);
+            if (rank == 1) CBoardConfigure::SetWhiteMainFigures(*b);
+            if (rank == 3) CBoardConfigure::SetBlackMainFigures(*b);
+            m_board = b;
+        } else {
+            CAttackBoard* b = new CAttackBoard(*this, *this);
+            if (rank == 4) CBoardConfigure::SetWhiteAttack1Figures(*b);
+            if (rank == 5) CBoardConfigure::SetWhiteAttack2Figures(*b);
+            if (rank == 6) CBoardConfigure::SetBlackAttack1Figures(*b);
+            if (rank == 7) CBoardConfigure::SetBlackAttack2Figures(*b);
+            m_board = b;
+        }
+        m_board->m_absoluteCoord = CBoardConfigure::GetInitialCoords(rank);
         Run();
     }
     void Run() {
-        Log("Run");
+        LogEx("Run\n" << *m_board);
         bool ok = true;
         while (ok) {
             MPI_Status r;
             ECommands cmd = RecieveCmd(MPI_ANY_SOURCE, &r);
-            LogEx(cmd);
+            LogEx("Got " << cmdToStr[cmd]);
             switch(cmd) {
             case CMD_NONE: {
                 assert(0);
@@ -81,19 +88,98 @@ struct CWorker: public CRankOwner, public MixMpiHelper, public MixTaskLogger {
                 ok = false;
             } break;
             case CMD_MOVE: {
-                // TODO:
                 CCoord3D from;
                 CCoord3D to;
                 GetData(from, r.MPI_SOURCE);
                 GetData(to, r.MPI_SOURCE);
-                SendCmd(CMD_FAIL, r.MPI_SOURCE);
+
+                if (m_board->CheckMove(from, to, GetRank())) {
+                    SendCmd(CMD_OK, r.MPI_SOURCE);
+                } else {
+                    SendCmd(CMD_FAIL, r.MPI_SOURCE);
+                }
+            } break;
+            case CMD_DUMP: {
+                assert(0); // TODO:
+            } break;
+            case CMD_IS_CELL_NON_EMPTY: {
+                CCoord2D coord;
+                GetData(coord, r.MPI_SOURCE);
+                CPiece* p = m_board->GetSafe_abs(coord);
+                if (NULL == p) {
+                    SendCmd(CMD_FAIL, r.MPI_SOURCE);
+                } else {
+                    SendCmd(CMD_OK, r.MPI_SOURCE);
+                }
+            } break;
+            case CMD_GIVE_CELL_COLOR: {
+                CCoord3D coord;
+                GetData(coord, r.MPI_SOURCE);
+                CPiece* p = m_board->GetSafe_abs(coord);
+                if (NULL == p) {
+                    SendCmd(CMD_FAIL, r.MPI_SOURCE);
+                } else {
+                    SendCmd(CMD_OK, r.MPI_SOURCE);
+                    SendData(p->m_color, r.MPI_SOURCE);
+                }
+            } break;
+            case CMD_IS_CONTAINS_COORD: {
+                CCoord3D coord;
+                GetData(coord, r.MPI_SOURCE);
+                if (m_board->ContainCoord_abs(coord)) {
+                    SendCmd(CMD_OK, r.MPI_SOURCE);
+                } else {
+                    SendCmd(CMD_FAIL, r.MPI_SOURCE);
+                }
+            } break;
+            case CMD_SET_PIECE: {
+                CCoord3D coord;
+                uint pieceType;
+                GetData(coord, r.MPI_SOURCE);
+                GetData(pieceType, r.MPI_SOURCE);
+                if (m_board->ContainCoord_abs(coord)) {
+                    if (NULL != m_board->Get_abs(coord)) {
+                        delete m_board->Get_abs(coord);
+                    }
+                    m_board->Get_abs(coord) = CreatePiece((EPieces)pieceType);
+                    SendCmd(CMD_OK, r.MPI_SOURCE);
+                } else {
+                    SendCmd(CMD_FAIL, r.MPI_SOURCE);
+                }
             } break;
             default: assert(0);
             }
         }
+        { LogEx("Finish\n" << *m_board); }
     }
+    CPiece* CreatePiece(EPieces pieceType) {
+        switch(pieceType) {
+        case EKnight: {
+            return new CKnight;
+        } break;
+        case EPawn: {
+            CPawn* p = new CPawn;
+            p->m_firstMove = false;
+            return p;
+        } break;
+        case EQueen: {
+            return new CQueen;
+        } break;
+        case EKing: {
+            return new CKing;
+        } break;
+        case EBishop: {
+            return new CBishop;
+        } break;
+        case ERook: {
+            return new CRook;
+        } break;
+        default: assert(0);
+        }
+        return NULL;
+    }
+    CBoard* m_board;
 };
-    
     
 int main(int argc, char* argv[])
 {

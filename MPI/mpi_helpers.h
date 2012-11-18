@@ -10,7 +10,7 @@
 #include <cstring>
 
 #define STDERR_LOG_DUMP
-#define DEBUG_COMMUNICATION
+//#define DEBUG_COMMUNICATION
 
 typedef unsigned uint;
 typedef unsigned char uchar;
@@ -45,7 +45,12 @@ enum ECommands {
     CMD_EXIT,
     CMD_MOVE,
     CMD_OK,
-    CMD_FAIL
+    CMD_FAIL,
+    CMD_DUMP,
+    CMD_IS_CELL_NON_EMPTY,
+    CMD_GIVE_CELL_COLOR,
+    CMD_IS_CONTAINS_COORD,
+    CMD_SET_PIECE,
 };
 
 static std::string cmdToStr[] = {
@@ -65,7 +70,12 @@ static std::string cmdToStr[] = {
     "CMD_EXIT",
     "CMD_MOVE",
     "CMD_OK",
-    "CMD_FAIL"
+    "CMD_FAIL",
+    "CMD_DUMP",
+    "CMD_IS_CELL_NON_EMPTY",
+    "CMD_GIVE_CELL_COLOR",
+    "CMD_IS_CONTAINS_COORD",
+    "CMD_SET_PIECE"
 };
 
 struct CLogedItem {
@@ -139,6 +149,7 @@ class CSideCoord;
 class CPointCoord;
 class CCoord2D;
 class CCoord3D;
+class CBoard;
 
 struct MixMpiHelper: virtual public IHaveRank, virtual public ILogger {
     void SendCmd(unsigned cmd, int destTask = 0);
