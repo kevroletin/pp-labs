@@ -87,11 +87,12 @@ static std::string piecesToStr[] = { "H", "P", "Q", "K", "B", "R" };
 static std::string piecesToStrLow[] = { "h", "p", "q", "k", "b", "r" };
 
 struct CMove {
-    CMove(int dx, int dy, bool jump = false): m_dx(dx), m_dy(dy), m_jump(jump) {}
-    CMove(CCoord2D c, bool jump = false): m_dx(c.m_x), m_dy(c.m_y), m_jump(jump) {}
+CMove(int dx, int dy, bool jump = false): m_dx(dx), m_dy(dy), m_jump(jump), m_kill(false) {}
+CMove(CCoord2D c, bool jump = false): m_dx(c.m_x), m_dy(c.m_y), m_jump(jump), m_kill(false) {}
     int m_dx;
     int m_dy;
     bool m_jump;
+    bool m_kill;
 };
 
 inline CCoord2D operator+(CCoord2D c, CMove m) {
@@ -173,12 +174,16 @@ struct CPawn: public CPiece {
     virtual T2DPath PlanMove(CCoord2D c) {
         T2DPath path;
         int forward = m_color == EWhite ? 1 : -1;
-        if (c.m_x != 0) return path;
-        if (c.m_y == forward) {
+        if (1 == abs(c.m_x) && c.m_y == forward) {
             path.push_back(c);
-        } else if (m_firstMove && c.m_y == 2*forward) {
-            path.push_back(CMove(0, forward));
-            path.push_back(CMove(0, forward));
+            path.back().m_kill = true;
+        } else if (0 == c.m_x) {
+            if (c.m_y == forward) {
+                path.push_back(c);
+            } else if (m_firstMove && c.m_y == 2*forward) {
+                path.push_back(CMove(0, forward));
+                path.push_back(CMove(0, forward));
+            }
         }
         return path;
     }
@@ -413,7 +418,8 @@ struct CBoard {
         if (ContainCoord_abs(toAbs)) {
             LogEx("Ok, toCoord on our board");
             LogEx("Check does to coord have not our pieces");
-            if (NULL != Get(to) && Get(from)->m_color == Get(to)->m_color) {
+            EColor toColor = Get(from)->m_color;
+            if (NULL != Get(to) && toColor == Get(to)->m_color) {
                 return false;
             }
             LogEx("Build move path");
@@ -422,9 +428,22 @@ struct CBoard {
             for (T2DPath::iterator it = path.begin(); it != path.end(); ++it) {
                 p = p + *it;
                 LogEx("p: " << p);
-                if (it != --path.end() && it->m_jump == false && NULL != GetSafe_abs(p)) {
-                    LogEx("we have here piece");
-                    return false;
+
+                if (it != --path.end()) {
+                    if (it->m_jump == false && NULL != GetSafe_abs(p)) {
+                        LogEx("we have here piece");
+                        return false;
+                    }
+                } else {
+                    if (EPawn == Get(from)->GetPieceTipe()) {
+                        if (it->m_kill) {
+                            LogEx("need to kill someone");
+                            if (NULL == Get(to)) return false;
+                        } else {
+                            LogEx("nee free cell to move");
+                            if (NULL != Get(to)) return false;
+                        }
+                    }
                 }
             }
             assert( toAbs.Get2DPart() == p );
@@ -435,9 +454,9 @@ struct CBoard {
             Get(from) = NULL;
         } else {
             LogEx("Check does to coord have not our pieces");
-            EColor color;
-            if ((color = MPI_CellColor(rank, toAbs)) == Get(from)->m_color) {
-                LogEx("Got color " << colorToStr[color]);
+            EColor toColor = MPI_CellColor(rank, toAbs);
+            if (toColor == Get(from)->m_color) {
+                LogEx("Got color " << colorToStr[toColor]);
                 LogEx("Have color " << colorToStr[Get(from)->m_color]);            
                 return false;
             }
@@ -446,11 +465,21 @@ struct CBoard {
             for (T2DPath::iterator it = path.begin(); it != path.end(); ++it) {
                 p = p + *it;
                 LogEx("p: " << p);
-                if (it != --path.end() && it->m_jump == false && 
-                    (NULL != GetSafe_abs(p) || MPI_AnyCellNonEmpty_abs(rank, p)))
-                {
-                    LogEx("someone have here piece");
-                    return false;
+                if (it != --path.end()) {
+                    if (it->m_jump == false && (NULL != GetSafe_abs(p) || MPI_AnyCellNonEmpty_abs(rank, p))) {
+                        LogEx("someone have here piece");
+                        return false;
+                    }
+                } else {
+                    if (EPawn == Get(from)->GetPieceTipe()) {
+                        if (it->m_kill) {
+                            LogEx("need to kill someone");
+                            if (ENone == toColor) return false;
+                        } else {
+                            LogEx("nee free cell to move");
+                            if (ENone != toColor) return false;
+                        }
+                    }
                 }
             }
             assert( toAbs.Get2DPart() == p );
@@ -496,9 +525,21 @@ struct CBoard {
         for (T2DPath::iterator it = path.begin(); it != path.end(); ++it) {
             p = p + *it;
             LogEx("p: " << p);
-            if (it != --path.end() && it->m_jump == false && broadcast.AnyCellNonEmpty_abs(p)) {
-                LogEx("someone have here piece");
-                return false;
+            if (it != --path.end()) {
+                if (it->m_jump == false && broadcast.AnyCellNonEmpty_abs(p)) {
+                    LogEx("someone have here piece");
+                    return false;
+                }
+            } else {
+                if (EPawn == Get(from)->GetPieceTipe()) {
+                    if (it->m_kill) {
+                        LogEx("need to kill someone");
+                        if (ENone == broadcast.CellColor(toAbs)) return false;
+                    } else {
+                        LogEx("nee free cell to move");
+                        if (ENone != broadcast.CellColor(toAbs)) return false;
+                    }
+                }
             }
         }
         assert( toAbs.Get2DPart() == p );
