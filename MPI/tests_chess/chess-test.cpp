@@ -5,10 +5,10 @@
 
 #undef Log
 #undef LogEx
-#define Log(str)
-#define LogEx(str)
-//#define Log(str) std::cerr << str << "\n";
-//#define LogEx(str) std::cerr << str << "\n";
+//#define Log(str)
+//#define LogEx(str)
+#define Log(str) std::cerr << str << "\n";
+#define LogEx(str) std::cerr << str << "\n";
 
 #include "chess.h"
 
@@ -148,10 +148,10 @@ struct CSimpleBroadcast: public CBoardBroadcast {
     }
     virtual bool AnyCellNonEmpty_abs(CCoord2D absCoord) {
         for (int i = 0; i < 3; ++i) {
-            if (NULL != m_mainBoards[i].GetSafe(absCoord)) return true;
+            if (NULL != m_mainBoards[i].GetSafe_abs(absCoord)) return true;
         }
         for (int i = 0; i < 4; ++i) {
-            if (NULL != m_attackBoards[i].GetSafe(absCoord)) return true;
+            if (NULL != m_attackBoards[i].GetSafe_abs(absCoord)) return true;
         }
         return false;
     }

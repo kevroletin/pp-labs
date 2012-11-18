@@ -8,26 +8,26 @@ attack board#3: x:4 y:8 level:6 black
   01123445
 0 RQ    KR 2
 1 PP    PP
-1   KBBK   1
-2   PPPP
-3   ....
-4   ....
+1   HBBH   1
+2   PPPP  
+3   ....  
+4   ....  
 4          2
 5         
 2          4
 3         
 3   ....   3
-4   ....
-5   ....
-6   ....
+4   ....  
+5   ....  
+6   ....  
 6          4
 7         
 4          6
 5         
 5   ....   5
-6   p...
-7   .ppp
-8   kbbk
+6   p...  
+7   .ppp  
+8   hbbh  
 8 pp    pp 6
 9 rq    kr
 main board#0: x:1 y:1 level:1
@@ -40,26 +40,26 @@ attack board#3: x:4 y:8 level:6 black
   01123445
 0 RQ    KR 2
 1 PP    PP
-1   KBBK   1
-2   PPPP
-3   ....
-4   ....
+1   HBBH   1
+2   PPPP  
+3   ....  
+4   ....  
 4          2
 5         
 2          4
 3         
 3   ....   3
-4   ....
-5   ....
-6   ....
+4   ....  
+5   ....  
+6   ....  
 6          4
 7         
 4          6
 5         
 5   .p..   5
-6   p...
-7   ..pp
-8   kbbk
+6   p...  
+7   ..pp  
+8   hbbh  
 8 pp    pp 6
 9 rq    kr
 main board#0: x:1 y:1 level:1
@@ -72,26 +72,26 @@ attack board#3: x:4 y:8 level:6 black
   01123445
 0 RQ    KR 2
 1 PP    PP
-1   KBBK   1
-2   PPPP
-3   ....
-4   ....
+1   HBBH   1
+2   PPPP  
+3   ....  
+4   ....  
 4          2
 5         
 2          4
 3         
 3   ....   3
-4   ....
-5   ....
-6   ..p.
+4   ....  
+5   ....  
+6   ..p.  
 6          4
 7         
 4          6
 5         
 5   .p..   5
-6   p...
-7   ...p
-8   kbbk
+6   p...  
+7   ...p  
+8   hbbh  
 8 pp    pp 6
 9 rq    kr
 main board#0: x:1 y:1 level:1
@@ -104,25 +104,25 @@ attack board#3: x:4 y:8 level:6 black
   01123445
 0 RQ    KR 2
 1 PP    PP
-1   KBBK   1
-2   PPPP
-3   ....
-4   ....
+1   HBBH   1
+2   PPPP  
+3   ....  
+4   ....  
 4          2
 5         
 2          4
 3         
 3   ....   3
-4   ....
-5   ...p
-6   ..p.
+4   ....  
+5   ...p  
+6   ..p.  
 6          4
 7         
 4          6
 5         
 5   .p..   5
-6   p...
-7   ....
-8   kbbk
+6   p...  
+7   ....  
+8   hbbh  
 8 pp    pp 6
 9 rq    kr

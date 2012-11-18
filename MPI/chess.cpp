@@ -20,11 +20,11 @@
 #include "chess.h"
 
 struct CSupervisor: public CRankOwner, public MixMpiHelper, public MixTaskLogger {
-    CSupervisor(CEnvironment& env, std::istream& in): CRankOwner(0), MixTaskLogger(0), m_env(env)
+    CSupervisor(CEnvironment& env, std::istream& in, std::ostream& out): CRankOwner(0), MixTaskLogger(0), m_env(env)
     {
-        Run(in);
+        Run(in, out);
     }
-    void Run(std::istream& in) {
+    void Run(std::istream& in, std::ostream& out) {
         Log("Run");
         char c;
         int xf, yf, levelf;
@@ -46,11 +46,118 @@ struct CSupervisor: public CRankOwner, public MixMpiHelper, public MixTaskLogger
                     assert(CMD_FAIL == cmd);
                 }
             }
+            Dump(out);
         }
         for (int i = 1; i <= maxRank; ++i) {
             SendCmd(CMD_DIE, i);
         }
     }
+    void Dump(std::ostream& out) {
+        for (int i = 1; i <= 3; ++i) {
+            SendCmd(CMD_GET_BOARD_INFO, i);
+            CCoord3D coord;
+            uint color;
+            GetData(coord, i);
+            GetData(color, i);
+            out << "main board#" << i - 1 << ": " << coord << "\n";
+        }
+        CCoord3D attackCoord[4];
+        for (int i = 4; i <= 7; ++i) {
+            SendCmd(CMD_GET_BOARD_INFO, i);
+            CCoord3D coord;
+            uint color;
+            GetData(coord, i);
+            GetData(color, i);
+            out << "attack board#" << i - 4 << ": " << coord << " " << colorToStr[color] << "\n";
+            attackCoord[i - 4] = coord;
+        }
+        for (int y = 0; y < 24; ++y) {
+            for (int x = 0; x < 8; ++x) {
+                dumpData[y][x] = ' ';
+            }
+        }
+        DumpBoard(1, CCoord2D(2, 2));
+        DumpBoard(2, CCoord2D(2, 10));
+        DumpBoard(3, CCoord2D(2, 18));
+
+        DumpBoard(4, AttackBoardCooadDelta(attackCoord[0]));
+        DumpBoard(5, AttackBoardCooadDelta(attackCoord[1]));
+        DumpBoard(6, AttackBoardCooadDelta(attackCoord[2]));
+        DumpBoard(7, AttackBoardCooadDelta(attackCoord[3]));
+
+        out << "  ";
+        for (int i = 0; i < 6; ++i) {
+            out << i;
+            if (i == 1 || i == 4) out << i;
+        }
+        out << "\n";
+
+        static int linum[] = { 0, 1, 1, 2, 3, 4, 4, 5, 2, 3, 3, 4, 5, 6, 6, 7, 4, 5, 5, 6, 7, 8, 8, 9};
+        static int level[] = { 2, 0, 1, 0, 0, 0, 2, 0, 4, 0, 3, 0, 0, 0, 4, 0, 6, 0, 5, 0, 0, 0, 6, 0};
+        int i = 0;
+        for (int y = 0; y < 24; ++y) {
+            out << linum[i] << " ";
+            for (int x = 0; x < 8; ++x) {
+                out << dumpData[y][x];
+            }
+            if (0 != level[i]) {
+                out << " " << level[i] << "\n";
+            } else {
+                out << "\n";
+            }
+            ++i;
+        }
+    }
+    void DumpBoard(int rank, CCoord2D p) {
+        SendCmd(CMD_DUMP, rank);
+        CCoord2D size;
+        GetData(size, rank);
+        for (int y = 0; y < size.m_y; ++y)
+            for (int x = 0; x < size.m_x; ++x) {
+                uint pieceType;
+                uint color;
+                GetData(pieceType, rank);
+                GetData(color, rank);
+                if (EPieceNone == pieceType) {
+                    dumpData[y + p.m_y][x + p.m_x] = '.';
+                } else {
+                    if (EWhite == color) {
+                        dumpData[y + p.m_y][x + p.m_x] = piecesToStr[pieceType][0];
+                    } else {
+                        dumpData[y + p.m_y][x + p.m_x] = piecesToStrLow[pieceType][0];
+                    }
+                }
+            }
+    }
+    CCoord2D AttackBoardCooadDelta(CCoord3D coord) {
+        CCoord2D p = coord.Get2DPart();
+        switch (coord.m_level) {
+        case 2: {
+            if (p == CCoord2D(0, 0)) return CCoord2D(0, 0);
+            if (p == CCoord2D(4, 0)) return CCoord2D(6, 0);
+            if (p == CCoord2D(0, 4)) return CCoord2D(0, 6);
+            if (p == CCoord2D(4, 4)) return CCoord2D(6, 6);
+            assert(0);        
+        } break;
+        case 4: {
+            if (p == CCoord2D(0, 2)) return CCoord2D(0, 8);
+            if (p == CCoord2D(4, 2)) return CCoord2D(6, 8);
+            if (p == CCoord2D(0, 6)) return CCoord2D(0, 14);
+            if (p == CCoord2D(4, 6)) return CCoord2D(6, 14);
+            assert(0);        
+        } break;
+        case 6: {
+            if (p == CCoord2D(0, 4)) return CCoord2D(0, 16);
+            if (p == CCoord2D(4, 4)) return CCoord2D(6, 16);
+            if (p == CCoord2D(0, 8)) return CCoord2D(0, 22);
+            if (p == CCoord2D(4, 8)) return CCoord2D(6, 22);
+            assert(0);        
+        } break;
+        default: assert(0);
+        }
+    }
+
+    char dumpData[24][8];
     CEnvironment& m_env;
 };
 
@@ -100,7 +207,18 @@ struct CWorker: public CRankOwner, public MixMpiHelper, public MixTaskLogger {
                 }
             } break;
             case CMD_DUMP: {
-                assert(0); // TODO:
+                CCoord2D size = m_board->GetSize();
+                SendData(size, r.MPI_SOURCE);
+                for (int y = 0; y < size.m_y; ++y)
+                    for (int x = 0; x < size.m_x; ++x) {
+                        if (NULL != m_board->Get(x, y)) {
+                            SendData(m_board->Get(x, y)->GetPieceTipe(), r.MPI_SOURCE);
+                            SendData((uint)m_board->Get(x, y)->m_color, r.MPI_SOURCE);
+                        } else {
+                            SendData(EPieceNone, r.MPI_SOURCE);
+                            SendData(ENone, r.MPI_SOURCE);
+                        }
+                    }
             } break;
             case CMD_IS_CELL_NON_EMPTY: {
                 CCoord2D coord;
@@ -152,6 +270,10 @@ struct CWorker: public CRankOwner, public MixMpiHelper, public MixTaskLogger {
                     SendCmd(CMD_FAIL, r.MPI_SOURCE);
                 }
             } break;
+            case CMD_GET_BOARD_INFO: {
+                SendData(m_board->m_absoluteCoord, r.MPI_SOURCE);
+                SendData((uint)m_board->GetColor(), r.MPI_SOURCE);
+            } break;
             default: assert(0);
             }
         }
@@ -197,10 +319,15 @@ int main(int argc, char* argv[])
             if (argc == 2) {
                 std::ifstream fin;
                 fin.open(argv[1]);
-                CSupervisor s(env, fin);
+                CSupervisor s(env, fin, std::cerr);
                 s.PublishLog();
-            } else {
-//                CSupervisor s(env, std::cin);
+            } else if (argc == 3) {
+                std::ifstream fin;
+                std::ofstream fout;
+                fin.open(argv[1]);
+                fout.open(argv[2]);
+                CSupervisor s(env, fin, fout);
+                s.PublishLog();
             }
         } else {
             if (env.m_rank <= maxRank) {
@@ -220,32 +347,3 @@ int main(int argc, char* argv[])
     return 0;
 }
     
-#if 0
-
-* Coding conventions
-
-1) All calls are syncronious. Even in multithread environments: method
-call should be replaced to message sending; response should be sent
-for every message.
-
-2) Because of 1) initial version of programm can be written for
-single-thread environment, debbuged, and then ported to multy thread
-environments.
-
-* Project plan
-
-** Code structure
-There will be 8 threads: supervisor, 3 main boards, 4 attack boards.
-
-*Boards* represents grid of cells; each cell on every board have
-relative coordinates and absolute coordinates.
-
-** Move
-
-1) Supervisor determine board which owns needed figure and send
-2 absolute coords: fromCorod, toCoord. Board using figure make move
-plan which contains 2d relative ccords. On each move step it asks
-toBoard is it have such 2d coords with some level coord value.
-
-
-#endif

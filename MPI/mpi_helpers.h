@@ -9,7 +9,7 @@
 #include <sstream>
 #include <cstring>
 
-#define STDERR_LOG_DUMP
+//#define STDERR_LOG_DUMP
 //#define DEBUG_COMMUNICATION
 
 typedef unsigned uint;
@@ -51,6 +51,7 @@ enum ECommands {
     CMD_GIVE_CELL_COLOR,
     CMD_IS_CONTAINS_COORD,
     CMD_SET_PIECE,
+    CMD_GET_BOARD_INFO
 };
 
 static std::string cmdToStr[] = {

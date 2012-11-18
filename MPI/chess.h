@@ -82,7 +82,9 @@ enum EPieces {
     EPieceNone,
 };
 
-static std::string piecesToStr[] = { "K", "P", "Q", "K", "B", "R" };
+
+static std::string piecesToStr[] = { "H", "P", "Q", "K", "B", "R" };
+static std::string piecesToStrLow[] = { "h", "p", "q", "k", "b", "r" };
 
 struct CMove {
     CMove(int dx, int dy, bool jump = false): m_dx(dx), m_dy(dy), m_jump(jump) {}
@@ -259,6 +261,7 @@ struct CBoard {
     int m_level;
     CCoord3D m_absoluteCoord;
     CPiece* m_field[maxBoardSize][maxBoardSize];
+    virtual EColor GetColor() { return ENone; }
     void Init() {
         CCoord2D size = GetSize();
         for (int y = 0; y < size.m_y; ++y) {
@@ -472,7 +475,7 @@ struct CBoard {
         LogEx("Check someone have to coord");
         if (!broadcast.ContainCoord_abs(toAbs)) return false;
         LogEx("Check does to coord have not our pieces");
-        if (broadcast.CellColor(toAbs) == Get(from)->m_color && Get(from)->m_color != ENone) return false;
+        if (broadcast.CellColor(toAbs) == Get(from)->m_color) return false;
         LogEx("Build move path");
         
         T2DPath path = Get(from)->PlanMove(to - from);
@@ -518,7 +521,7 @@ struct CBoard {
                 }
             }
             if (y == 0) out << "   " << m_absoluteCoord.m_level << "\n";
-            else out << "\n";
+            else out << "  \n";
         }
     }
 };
@@ -545,6 +548,7 @@ struct CAttackBoard: public CBoard {
 #endif
     EColor m_color;
     virtual CCoord2D GetSize() { return CCoord2D(2, 2); }
+    virtual EColor GetColor() { return m_color; }
     void AttachToPin(EPinSide side, CCoord3D pinCoord) {
         m_absoluteCoord = pinCoord;
         m_absoluteCoord.m_level += 1;
@@ -646,10 +650,10 @@ struct CBoardConfigure {
         if (rank == 1) return CCoord3D(1, 1, 1);
         if (rank == 2) return CCoord3D(1, 3, 3);
         if (rank == 3) return CCoord3D(1, 5, 5);
-        if (rank == 4) return CCoord3D(0, 0, 1);
-        if (rank == 5) return CCoord3D(4, 0, 3);
-        if (rank == 6) return CCoord3D(0, 8, 5);
-        if (rank == 7) return CCoord3D(4, 8, 5);        
+        if (rank == 4) return CCoord3D(0, 0, 2);
+        if (rank == 5) return CCoord3D(4, 0, 2);
+        if (rank == 6) return CCoord3D(0, 8, 6);
+        if (rank == 7) return CCoord3D(4, 8, 6);        
         assert(0);
     }
 };
