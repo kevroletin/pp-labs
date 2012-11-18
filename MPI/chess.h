@@ -7,16 +7,6 @@
 #include <iostream>
 #include <algorithm>
 
-#undef Log
-#undef LogEx
-#define Log(str) CLogHelper L(*this, str);
-#define LogEx(data)                              \
-    {                                            \
-        std::stringstream ss;                    \
-        ss << data;                              \
-        Log(ss.str());                           \
-    }
-
 const int maxRank = 7;
 
 static inline int sign(int x) { return x > 0 ? 1 : x == 0 ? 0 : -1; }
@@ -61,12 +51,12 @@ static inline std::ostream& operator<<(std::ostream& out, CCoord3D c) {
 }
 
 enum EColor {
+    ENone = 0,
     EWhite = 1,
-    ENone  = 0,
-    EBlack = -1,
+    EBlack = 2,
 };
 
-static std::string colorToStr[] = { "white", "none", "black" };
+static std::string colorToStr[] = { "none", "white", "black" };
 
 /*enum ESide {
     ETop,
@@ -148,6 +138,9 @@ static inline std::ostream& operator<<(std::ostream& out, CPiece& p) {
     if (EBlack == p.m_color) {
         std::transform(str.begin(), str.end(), str.begin(), tolower);
     }
+    if (ENone == p.m_color) { // DEBUG
+        str = "x";
+    }
     out << str;
     return out;
 }
@@ -177,12 +170,13 @@ struct CPawn: public CPiece {
     virtual EPieces GetPieceTipe() { return EPawn; }
     virtual T2DPath PlanMove(CCoord2D c) {
         T2DPath path;
+        int forward = m_color == EWhite ? 1 : -1;
         if (c.m_x != 0) return path;
-        if (c.m_y == m_color) {
+        if (c.m_y == forward) {
             path.push_back(c);
-        } else if (m_firstMove && c.m_y == 2*m_color) {
-            path.push_back(CMove(0, m_color));
-            path.push_back(CMove(0, m_color));
+        } else if (m_firstMove && c.m_y == 2*forward) {
+            path.push_back(CMove(0, forward));
+            path.push_back(CMove(0, forward));
         }
         return path;
     }
@@ -248,10 +242,20 @@ struct CQueen: public CPiece {
     }
 };
 
-struct CBoard: public CRankSlave, public MixMpiHelper, public MixSlaveLogger {
-    static const int maxBoardSize = 4;
+struct CBoardBroadcast {
+    virtual bool AnyCellNonEmpty_abs(CCoord2D absCoord) = 0;
+    virtual EColor CellColor(CCoord3D absCoord) = 0;
+    virtual bool ContainCoord_abs(CCoord3D absCoord) = 0;
+};
 
+#ifdef USE_MPI
+struct CBoard: public CRankSlave, public MixMpiHelper, public MixSlaveLogger {
     CBoard(IHaveRank& owner, ILogger& log): CRankSlave(owner), MixSlaveLogger(log) {}
+#else
+struct CBoard {
+#endif
+    static const int maxBoardSize = 4;
+    
     int m_level;
     CCoord3D m_absoluteCoord;
     CPiece* m_field[maxBoardSize][maxBoardSize];
@@ -268,6 +272,7 @@ struct CBoard: public CRankSlave, public MixMpiHelper, public MixSlaveLogger {
         return coord.m_level == m_absoluteCoord.m_level &&
                GetSize().Inside(ToRelativeCoord(coord));
     }
+#ifdef USE_MPI
     bool MPI_ContainCoord_abs(int rank, CCoord3D coord) {
         for (int i = 1; i < maxRank; ++i) {
             if (i != rank) {
@@ -281,6 +286,7 @@ struct CBoard: public CRankSlave, public MixMpiHelper, public MixSlaveLogger {
         return false;
     }
     EColor MPI_CellColor(int rank, CCoord3D absCoord) {
+        Log("MPI_CellColor");
         for (int i = 1; i < maxRank; ++i) {
             if (i != rank) {
                 SendCmd(CMD_GIVE_CELL_COLOR, i);
@@ -289,10 +295,12 @@ struct CBoard: public CRankSlave, public MixMpiHelper, public MixSlaveLogger {
                 if (CMD_OK == cmd) {
                     uint color;
                     GetData(color, i);
+                    LogEx("MPI_CellColor " << colorToStr[color] << " from " << i);
                     return (EColor) color;
                 }
             }
         }        
+        LogEx("MPI_CellColor ENone");
         return ENone;
     }
     bool MPI_AnyCellNonEmpty_abs(int rank, CCoord2D absCoord) {
@@ -309,12 +317,13 @@ struct CBoard: public CRankSlave, public MixMpiHelper, public MixSlaveLogger {
         }        
         return false;
     }
-    bool MPI_SetPiece(int rank, CCoord3D absCoord, EPieces pieceType) {
+    bool MPI_SetPiece(int rank, CCoord3D absCoord, EPieces pieceType, EColor color) {
         for (int i = 1; i < maxRank; ++i) {
             if (i != rank) {
                 SendCmd(CMD_SET_PIECE, i);
                 SendData(absCoord, i);
                 SendData(pieceType, i);
+                SendData((uint)color, i);
                 ECommands cmd = RecieveCmd(i);
                 if (CMD_OK == cmd) {
                     return true;
@@ -324,6 +333,7 @@ struct CBoard: public CRankSlave, public MixMpiHelper, public MixSlaveLogger {
         }        
         return false;
     }
+#endif
     bool ContainCoord_abs(CCoord2D coord) {
         CCoord2D size = GetSize();
         return size.Inside(ToRelativeCoord(coord));
@@ -379,7 +389,8 @@ struct CBoard: public CRankSlave, public MixMpiHelper, public MixSlaveLogger {
     CPiece* GetSafe_abs(CCoord3D p) {
         if (!ContainCoord_abs(p)) return NULL;
         return Get(ToRelativeCoord(p.Get2DPart()));
-    }        
+    }
+#ifdef USE_MPI
     bool CheckMove(CCoord3D fromAbs, CCoord3D toAbs, int rank) {
         LogEx("Check we have from coord " << fromAbs);
         if (NULL == GetSafe_abs(fromAbs)) return false;
@@ -387,14 +398,81 @@ struct CBoard: public CRankSlave, public MixMpiHelper, public MixSlaveLogger {
         CCoord2D from = ToRelativeCoord(fromAbs);
         CCoord2D to = ToRelativeCoord(toAbs);
 
+        LogEx("Build move path");
+            
+        T2DPath path = Get(from)->PlanMove(to - from);
+        LogEx("Path: " << path);
+        if (0 == path.size()) return false;
+        
         LogEx("Check someone have to coord");
         if (!ContainCoord_abs(toAbs) && !MPI_ContainCoord_abs(rank, toAbs)) return false;
-        LogEx("Check does to coord have not our pieces");
-        if ((NULL != GetSafe_abs(toAbs) && Get(from)->m_color == Get(to)->m_color) ||
-            (MPI_CellColor(rank, toAbs) == Get(from)->m_color))
-        {
-            return false;
+        LogEx("Check is toCoord on our board");
+        if (ContainCoord_abs(toAbs)) {
+            LogEx("Ok, toCoord on our board");
+            LogEx("Check does to coord have not our pieces");
+            if (NULL != Get(to) && Get(from)->m_color == Get(to)->m_color) {
+                return false;
+            }
+            LogEx("Build move path");
+            
+            CCoord2D p = fromAbs.Get2DPart();
+            for (T2DPath::iterator it = path.begin(); it != path.end(); ++it) {
+                p = p + *it;
+                LogEx("p: " << p);
+                if (it != --path.end() && it->m_jump == false && NULL != GetSafe_abs(p)) {
+                    LogEx("we have here piece");
+                    return false;
+                }
+            }
+            assert( toAbs.Get2DPart() == p );
+            
+            LogEx("Perform move");
+            delete Get(to);
+            Get(to) = Get(from);
+            Get(from) = NULL;
+        } else {
+            LogEx("Check does to coord have not our pieces");
+            EColor color;
+            if ((color = MPI_CellColor(rank, toAbs)) == Get(from)->m_color) {
+                LogEx("Got color " << colorToStr[color]);
+                LogEx("Have color " << colorToStr[Get(from)->m_color]);            
+                return false;
+            }
+            
+            CCoord2D p = fromAbs.Get2DPart();
+            for (T2DPath::iterator it = path.begin(); it != path.end(); ++it) {
+                p = p + *it;
+                LogEx("p: " << p);
+                if (it != --path.end() && it->m_jump == false && 
+                    (NULL != GetSafe_abs(p) || MPI_AnyCellNonEmpty_abs(rank, p)))
+                {
+                    LogEx("someone have here piece");
+                    return false;
+                }
+            }
+            assert( toAbs.Get2DPart() == p );
+            
+            LogEx("Perform move");
+            assert( false != MPI_SetPiece(rank, toAbs, Get(from)->GetPieceTipe(), Get(from)->m_color));
+            delete Get(from);
         }
+        Get(from) = NULL;
+
+        LogEx("Move is possible");
+        return true;
+    }
+#else
+    bool CheckMove(CCoord3D fromAbs, CCoord3D toAbs, CBoardBroadcast& broadcast) {
+        LogEx("Check we have from coord " << fromAbs);
+        if (NULL == GetSafe_abs(fromAbs)) return false;
+
+        CCoord2D from = ToRelativeCoord(fromAbs);
+        CCoord2D to = ToRelativeCoord(toAbs);
+
+        LogEx("Check someone have to coord");
+        if (!broadcast.ContainCoord_abs(toAbs)) return false;
+        LogEx("Check does to coord have not our pieces");
+        if (broadcast.CellColor(toAbs) == Get(from)->m_color && Get(from)->m_color != ENone) return false;
         LogEx("Build move path");
         
         T2DPath path = Get(from)->PlanMove(to - from);
@@ -405,28 +483,16 @@ struct CBoard: public CRankSlave, public MixMpiHelper, public MixSlaveLogger {
         for (T2DPath::iterator it = path.begin(); it != path.end(); ++it) {
             p = p + *it;
             LogEx("p: " << p);
-            if (it != --path.end() && it->m_jump == false && 
-                (NULL != GetSafe_abs(p) || MPI_AnyCellNonEmpty_abs(rank, p)))
-            {
+            if (it != --path.end() && it->m_jump == false && broadcast.AnyCellNonEmpty_abs(p)) {
                 LogEx("someone have here piece");
                 return false;
             }
         }
         assert( toAbs.Get2DPart() == p );
 
-        LogEx("Perform move");
-        if (ContainCoord_abs(toAbs)) {
-            delete Get(to);
-            Get(to) = Get(from);
-        } else {
-            assert( false != MPI_SetPiece(rank, toAbs, Get(from)->GetPieceTipe()) );
-            delete Get(from);
-        }
-        Get(from) = NULL;
-
-        LogEx("Move is possible");
         return true;
     }
+#endif
     CCoord2D ToRelativeCoord(CCoord2D c) { return c - m_absoluteCoord.Get2DPart(); }
     CCoord2D ToRelativeCoord(CCoord3D c) { return c.Get2DPart() - m_absoluteCoord.Get2DPart(); }
     EColor GetFigureColor_abs(CCoord2D absCoord) {
@@ -462,13 +528,21 @@ inline std::ostream& operator<<(std::ostream& out, CBoard& board) {
     return out;
 }
 
+#ifdef USE_MPI
 struct CMainBoard: public CBoard {
     CMainBoard(IHaveRank& owner, ILogger& log): CBoard(owner, log) {}
+#else
+    struct CMainBoard: public CBoard {
+#endif
     virtual CCoord2D GetSize() { return CCoord2D(4, 4); }
 };
 
+#ifdef USE_MPI
 struct CAttackBoard: public CBoard {
     CAttackBoard(IHaveRank& owner, ILogger& log): CBoard(owner, log) {}
+#else
+    struct CAttackBoard: public CBoard {
+#endif
     EColor m_color;
     virtual CCoord2D GetSize() { return CCoord2D(2, 2); }
     void AttachToPin(EPinSide side, CCoord3D pinCoord) {
@@ -571,11 +645,11 @@ struct CBoardConfigure {
     static CCoord3D GetInitialCoords(int rank) {
         if (rank == 1) return CCoord3D(1, 1, 1);
         if (rank == 2) return CCoord3D(1, 3, 3);
-        if (rank == 3) return CCoord3D(1, 4, 5);
+        if (rank == 3) return CCoord3D(1, 5, 5);
         if (rank == 4) return CCoord3D(0, 0, 1);
-        if (rank == 5) return CCoord3D(0, 4, 3);
-        if (rank == 6) return CCoord3D(8, 0, 5);
-        if (rank == 7) return CCoord3D(8, 4, 5);        
+        if (rank == 5) return CCoord3D(4, 0, 3);
+        if (rank == 6) return CCoord3D(0, 8, 5);
+        if (rank == 7) return CCoord3D(4, 8, 5);        
         assert(0);
     }
 };

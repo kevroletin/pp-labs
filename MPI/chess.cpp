@@ -115,10 +115,12 @@ struct CWorker: public CRankOwner, public MixMpiHelper, public MixTaskLogger {
             case CMD_GIVE_CELL_COLOR: {
                 CCoord3D coord;
                 GetData(coord, r.MPI_SOURCE);
+//                LogEx(coord);
                 CPiece* p = m_board->GetSafe_abs(coord);
                 if (NULL == p) {
                     SendCmd(CMD_FAIL, r.MPI_SOURCE);
                 } else {
+//                    LogEx(m_board->ToRelativeCoord(coord) << "\n" << *m_board);
                     SendCmd(CMD_OK, r.MPI_SOURCE);
                     SendData(p->m_color, r.MPI_SOURCE);
                 }
@@ -135,13 +137,16 @@ struct CWorker: public CRankOwner, public MixMpiHelper, public MixTaskLogger {
             case CMD_SET_PIECE: {
                 CCoord3D coord;
                 uint pieceType;
+                uint color;
                 GetData(coord, r.MPI_SOURCE);
                 GetData(pieceType, r.MPI_SOURCE);
+                GetData(color, r.MPI_SOURCE);
                 if (m_board->ContainCoord_abs(coord)) {
                     if (NULL != m_board->Get_abs(coord)) {
                         delete m_board->Get_abs(coord);
                     }
                     m_board->Get_abs(coord) = CreatePiece((EPieces)pieceType);
+                    m_board->Get_abs(coord)->m_color = (EColor)color;
                     SendCmd(CMD_OK, r.MPI_SOURCE);
                 } else {
                     SendCmd(CMD_FAIL, r.MPI_SOURCE);

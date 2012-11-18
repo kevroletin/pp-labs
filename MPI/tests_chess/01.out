@@ -1,10 +1,10 @@
 main board#0: x:1 y:1 level:1
 main board#1: x:1 y:3 level:3
 main board#2: x:1 y:5 level:5
-attack board#0: x:0 y:0 level:2 black
-attack board#1: x:4 y:0 level:2 black
-attack board#2: x:0 y:8 level:6 white
-attack board#3: x:4 y:8 level:6 white
+attack board#0: x:0 y:0 level:2 white
+attack board#1: x:4 y:0 level:2 white
+attack board#2: x:0 y:8 level:6 black
+attack board#3: x:4 y:8 level:6 black
   01123445
 0 RQ    KR 2
 1 PP    PP
@@ -33,10 +33,10 @@ attack board#3: x:4 y:8 level:6 white
 main board#0: x:1 y:1 level:1
 main board#1: x:1 y:3 level:3
 main board#2: x:1 y:5 level:5
-attack board#0: x:0 y:0 level:2 black
-attack board#1: x:4 y:0 level:2 black
-attack board#2: x:0 y:8 level:6 white
-attack board#3: x:4 y:8 level:6 white
+attack board#0: x:0 y:0 level:2 white
+attack board#1: x:4 y:0 level:2 white
+attack board#2: x:0 y:8 level:6 black
+attack board#3: x:4 y:8 level:6 black
   01123445
 0 RQ    KR 2
 1 PP    PP
@@ -65,10 +65,10 @@ attack board#3: x:4 y:8 level:6 white
 main board#0: x:1 y:1 level:1
 main board#1: x:1 y:3 level:3
 main board#2: x:1 y:5 level:5
-attack board#0: x:0 y:0 level:2 black
-attack board#1: x:4 y:0 level:2 black
-attack board#2: x:0 y:8 level:6 white
-attack board#3: x:4 y:8 level:6 white
+attack board#0: x:0 y:0 level:2 white
+attack board#1: x:4 y:0 level:2 white
+attack board#2: x:0 y:8 level:6 black
+attack board#3: x:4 y:8 level:6 black
   01123445
 0 RQ    KR 2
 1 PP    PP
@@ -97,10 +97,10 @@ attack board#3: x:4 y:8 level:6 white
 main board#0: x:1 y:1 level:1
 main board#1: x:1 y:3 level:3
 main board#2: x:1 y:5 level:5
-attack board#0: x:0 y:0 level:2 black
-attack board#1: x:4 y:0 level:2 black
-attack board#2: x:0 y:8 level:6 white
-attack board#3: x:4 y:8 level:6 white
+attack board#0: x:0 y:0 level:2 white
+attack board#1: x:4 y:0 level:2 white
+attack board#2: x:0 y:8 level:6 black
+attack board#3: x:4 y:8 level:6 black
   01123445
 0 RQ    KR 2
 1 PP    PP

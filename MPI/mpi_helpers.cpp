@@ -1,6 +1,8 @@
 #include "mpi_helpers.h"
 #include "labyrinth.h"
 #include "mpi.h"
+
+#define USE_MPI
 #include "chess.h"
 
 #include <cassert> // TODO: throw errors enstead
