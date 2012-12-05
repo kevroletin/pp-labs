@@ -497,7 +497,7 @@ struct CBoard {
         LogEx("Check is it our move " << fromAbs << " vs " << m_absoluteCoord);
         if (fromAbs != m_absoluteCoord) return false;
         LogEx("Check is move possible");
-        if (!AllovedBoardMove(fromAbs, toAbs)) return false;
+        if (!AllowedBoardMove(fromAbs, toAbs)) return false;
         LogEx("Check is position free");
         if (MPI_ContainCoord_abs(rank, toAbs)) return false;
         m_absoluteCoord = toAbs;
@@ -575,9 +575,23 @@ struct CBoard {
             else out << "  \n";
         }
     }
-    static bool AllovedBoardMove(CCoord3D from, CCoord3D to) {
-        // TODO:
-        return true;
+    static bool AllowedBoardMove(CCoord3D from, CCoord3D to) {
+        if (to == CCoord3D(0, 0, 2)) return true;
+        if (to == CCoord3D(4, 0, 2)) return true;
+        if (to == CCoord3D(0, 4, 2)) return true;
+        if (to == CCoord3D(4, 4, 2)) return true;
+
+        if (to == CCoord3D(0, 2, 4)) return true;
+        if (to == CCoord3D(4, 2, 4)) return true;
+        if (to == CCoord3D(0, 6, 4)) return true;
+        if (to == CCoord3D(4, 6, 4)) return true;
+        
+        if (to == CCoord3D(0, 4, 6)) return true;
+        if (to == CCoord3D(4, 4, 6)) return true;
+        if (to == CCoord3D(0, 8, 6)) return true;
+        if (to == CCoord3D(4, 8, 6)) return true;
+
+        return false;
     }
 };
 
